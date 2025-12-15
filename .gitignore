@@ -1,0 +1,39 @@
+# Python Virtual Environment
+.venv/
+venv/
+__pycache__/
+
+# Node modules
+node_modules/
+
+# Environment variables (IMPORTANTE - NO SUBIR)
+.env
+.env.local
+.env.*.local
+*.env
+
+# Firebase credentials (CRÍTICO - NO SUBIR)
+*firebase-credentials*.json
+*serviceAccountKey*.json
+*firebase-adminsdk*.json
+
+# Build outputs
+dist/
+dist-ssr/
+build/
+*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+logs/

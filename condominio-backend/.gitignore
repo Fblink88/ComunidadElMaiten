@@ -1,0 +1,30 @@
+# Entorno virtual
+venv/
+.venv/
+
+# Variables de entorno (contiene secretos)
+.env
+
+# Archivos de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Archivos de IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Firebase credentials (muy importante)
+*serviceAccountKey*.json
+*firebase-adminsdk*.json
+firebase-credentials.json
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
