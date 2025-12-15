@@ -528,27 +528,6 @@ POST   /api/webhook/flow                  # Webhook de Flow (interno)
 }
 ```
 
-## 🤝 Contribución
-
-Las contribuciones son bienvenidas. Por favor:
-
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add: amazing feature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
-### Convenciones de Commits
-
-Seguimos [Conventional Commits](https://www.conventionalcommits.org/):
-
-- `feat:` Nueva funcionalidad
-- `fix:` Corrección de bug
-- `docs:` Cambios en documentación
-- `style:` Cambios de formato (no afectan el código)
-- `refactor:` Refactorización de código
-- `test:` Agregar o modificar tests
-- `chore:` Cambios en build, dependencias, etc.
 
 ## 📝 Licencia
 
@@ -556,16 +535,8 @@ Este proyecto está bajo la Licencia MIT. Ver archivo `LICENSE` para más detall
 
 ## 👤 Autor
 
-**Tu Nombre**
-- GitHub: [@tu-usuario](https://github.com/tu-usuario)
-
-## 🙏 Agradecimientos
-
-- [Firebase](https://firebase.google.com/) por la infraestructura backend
-- [FastAPI](https://fastapi.tiangolo.com/) por el excelente framework
-- [Feature-Sliced Design](https://feature-sliced.design/) por la arquitectura
-- [Tailwind CSS](https://tailwindcss.com/) por el sistema de diseño
-- [Flow](https://www.flow.cl/) por la pasarela de pagos
+**Fabián Basaes **
+- GitHub: [@tu-usuario](https://github.com/Fblink88)
 
 ---
 
