@@ -1,8 +1,8 @@
-# 🏢 Sistema de Gestión de Gastos Comunes - Comunidad El Maitén
+# Sistema de Gestión de Gastos Comunes - Comunidad El Maitén
 
 Sistema web completo para la administración de gastos comunes en condominios. Diseñado para facilitar la gestión de pagos, control de gastos mensuales y extraordinarios, y comunicación entre administradores y residentes.
 
-## 📋 Tabla de Contenidos
+## Tabla de Contenidos
 
 - [Características](#-características)
 - [Tecnologías](#-tecnologías)
@@ -16,7 +16,7 @@ Sistema web completo para la administración de gastos comunes en condominios. D
 - [Roadmap](#-roadmap)
 - [Contribución](#-contribución)
 
-## ✨ Características
+## Características
 
 ### Para Administradores
 - ✅ Gestión completa de departamentos y residentes
@@ -34,12 +34,12 @@ Sistema web completo para la administración de gastos comunes en condominios. D
 - 🔄 Envío de reportes y reclamos
 
 ### Características Técnicas
-- 🔐 Autenticación segura con Firebase Authentication
-- 🌐 API RESTful completa y documentada
-- 📱 Interfaz responsive (móvil, tablet, desktop)
-- 🎨 Diseño moderno con Tailwind CSS
-- 🔄 Validación de datos en frontend y backend
-- 📊 Base de datos en tiempo real con Firestore
+-  Autenticación segura con Firebase Authentication
+-  API RESTful completa y documentada
+-  Interfaz responsive (móvil, tablet, desktop)
+-  Diseño moderno con Tailwind CSS
+-  Validación de datos en frontend y backend
+-  Base de datos en tiempo real con Firestore
 
 **Leyenda:** ✅ Implementado | 🔄 En desarrollo
 
@@ -110,14 +110,14 @@ Cliente → Controller → Service → Repository → Firestore
     Validación   Lógica   Transformación Persistencia
 ```
 
-## 📦 Requisitos Previos
+## Requisitos Previos
 
 - **Node.js** 18+ y npm/pnpm/yarn
 - **Python** 3.12+
 - **Cuenta Firebase** con proyecto configurado
 - **Git** para control de versiones
 
-## 🚀 Instalación
+##  Instalación
 
 ### 1. Clonar el repositorio
 
@@ -157,7 +157,7 @@ pnpm install
 yarn install
 ```
 
-## ⚙️ Configuración
+##  Configuración
 
 ### Backend
 
@@ -256,7 +256,7 @@ service cloud.firestore {
 }
 ```
 
-## 🎯 Uso
+##  Uso
 
 ### Desarrollo
 
@@ -379,7 +379,7 @@ ComunidadElMaiten/
     └── firebase-credentials.json (no incluido en git)
 ```
 
-## 🌐 API Endpoints
+##  API Endpoints
 
 ### Autenticación
 ```
@@ -427,7 +427,7 @@ POST   /api/webhook/flow                  # Webhook de Flow (interno)
 
 **Documentación interactiva completa**: http://localhost:8000/docs
 
-## 🗺️ Roadmap
+## Roadmap
 
 ### Fase 1 - MVP ✅ (Completado)
 - [x] Autenticación y gestión de usuarios
@@ -463,7 +463,7 @@ POST   /api/webhook/flow                  # Webhook de Flow (interno)
 - [ ] Rate limiting
 - [ ] Versionado de API
 
-## 📊 Modelo de Datos
+##  Modelo de Datos
 
 ### Usuario
 ```typescript
@@ -528,44 +528,15 @@ POST   /api/webhook/flow                  # Webhook de Flow (interno)
 }
 ```
 
-## 🤝 Contribución
 
-Las contribuciones son bienvenidas. Por favor:
-
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add: amazing feature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
-### Convenciones de Commits
-
-Seguimos [Conventional Commits](https://www.conventionalcommits.org/):
-
-- `feat:` Nueva funcionalidad
-- `fix:` Corrección de bug
-- `docs:` Cambios en documentación
-- `style:` Cambios de formato (no afectan el código)
-- `refactor:` Refactorización de código
-- `test:` Agregar o modificar tests
-- `chore:` Cambios en build, dependencias, etc.
-
-## 📝 Licencia
+##  Licencia
 
 Este proyecto está bajo la Licencia MIT. Ver archivo `LICENSE` para más detalles.
 
-## 👤 Autor
+##  Autor
 
-**Tu Nombre**
-- GitHub: [@tu-usuario](https://github.com/tu-usuario)
-
-## 🙏 Agradecimientos
-
-- [Firebase](https://firebase.google.com/) por la infraestructura backend
-- [FastAPI](https://fastapi.tiangolo.com/) por el excelente framework
-- [Feature-Sliced Design](https://feature-sliced.design/) por la arquitectura
-- [Tailwind CSS](https://tailwindcss.com/) por el sistema de diseño
-- [Flow](https://www.flow.cl/) por la pasarela de pagos
+**Fabián Basaes **
+- GitHub: [@tu-usuario](https://github.com/Fblink88)
 
 ---
 
