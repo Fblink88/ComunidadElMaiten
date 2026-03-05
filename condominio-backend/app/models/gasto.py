@@ -80,8 +80,11 @@ class GastoMensualResponse(GastoMensualBase):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = {
+        "populate_by_name": True,
+        "extra": "ignore",
+        "from_attributes": True
+    }
 
 
 # ============================================
@@ -146,5 +149,8 @@ class GastoExtraordinarioResponse(GastoExtraordinarioBase):
     )
     created_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = {
+        "populate_by_name": True,
+        "extra": "ignore",
+        "from_attributes": True
+    }

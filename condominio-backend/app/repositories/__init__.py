@@ -16,3 +16,4 @@ from .departamento_repository import DepartamentoRepository
 from .usuario_repository import UsuarioRepository
 from .pago_repository import PagoRepository
 from .gasto_repository import GastoRepository
+from .transaccion_repository import TransaccionRepository

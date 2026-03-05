@@ -23,7 +23,7 @@ class UsuarioService:
         self.usuario_repo = UsuarioRepository()
         self.depto_repo = DepartamentoRepository()
     
-    def crear(self, uid: str, data: UsuarioCreate) -> Dict[str, Any]:
+    async def crear(self, uid: str, data: UsuarioCreate) -> Dict[str, Any]:
         """
         Crea un nuevo usuario.
         
@@ -38,16 +38,16 @@ class UsuarioService:
             ValueError: Si el email ya está registrado
         """
         # Verificar que no exista otro con el mismo email
-        existente = self.usuario_repo.get_by_email(data.email)
+        existente = await self.usuario_repo.get_by_email(data.email)
         if existente:
             raise ValueError(f"Ya existe un usuario con email {data.email}")
         
         # Preparar datos
         usuario_data = data.model_dump()
         
-        return self.usuario_repo.create_with_uid(uid, usuario_data)
+        return await self.usuario_repo.create_with_uid(uid, usuario_data)
     
-    def obtener_por_id(self, usuario_id: str) -> Optional[Dict[str, Any]]:
+    async def obtener_por_id(self, usuario_id: str) -> Optional[Dict[str, Any]]:
         """
         Obtiene un usuario por su ID.
         
@@ -57,9 +57,9 @@ class UsuarioService:
         Returns:
             Diccionario con el usuario o None
         """
-        return self.usuario_repo.get_by_id(usuario_id)
+        return await self.usuario_repo.get_by_id(usuario_id)
     
-    def obtener_por_email(self, email: str) -> Optional[Dict[str, Any]]:
+    async def obtener_por_email(self, email: str) -> Optional[Dict[str, Any]]:
         """
         Obtiene un usuario por su email.
         
@@ -69,18 +69,18 @@ class UsuarioService:
         Returns:
             Diccionario con el usuario o None
         """
-        return self.usuario_repo.get_by_email(email)
+        return await self.usuario_repo.get_by_email(email)
     
-    def obtener_todos(self) -> List[Dict[str, Any]]:
+    async def obtener_todos(self) -> List[Dict[str, Any]]:
         """
         Obtiene todos los usuarios.
         
         Returns:
             Lista de todos los usuarios
         """
-        return self.usuario_repo.get_all()
+        return await self.usuario_repo.get_all()
     
-    def obtener_por_departamento(self, departamento_id: str) -> List[Dict[str, Any]]:
+    async def obtener_por_departamento(self, departamento_id: str) -> List[Dict[str, Any]]:
         """
         Obtiene los usuarios de un departamento.
         
@@ -90,9 +90,9 @@ class UsuarioService:
         Returns:
             Lista de usuarios del departamento
         """
-        return self.usuario_repo.get_by_departamento(departamento_id)
+        return await self.usuario_repo.get_by_departamento(departamento_id)
     
-    def actualizar(
+    async def actualizar(
         self, 
         usuario_id: str, 
         data: UsuarioUpdate,
@@ -127,9 +127,9 @@ class UsuarioService:
         # Filtrar solo campos con valor
         update_data = data.model_dump(exclude_unset=True)
         
-        return self.usuario_repo.update(usuario_id, update_data)
+        return await self.usuario_repo.update(usuario_id, update_data)
     
-    def eliminar(
+    async def eliminar(
         self, 
         usuario_id: str,
         usuario_solicitante: Dict[str, Any]
@@ -157,13 +157,13 @@ class UsuarioService:
             raise ValueError("No puedes eliminarte a ti mismo")
         
         # Si está asociado a un departamento, removerlo primero
-        usuario = self.usuario_repo.get_by_id(usuario_id)
+        usuario = await self.usuario_repo.get_by_id(usuario_id)
         if usuario and usuario.get('departamento_id'):
-            self.depto_repo.remover_usuario(usuario['departamento_id'], usuario_id)
+            await self.depto_repo.remover_usuario(usuario['departamento_id'], usuario_id)
         
-        return self.usuario_repo.delete(usuario_id)
+        return await self.usuario_repo.delete(usuario_id)
     
-    def cambiar_rol(
+    async def cambiar_rol(
         self,
         usuario_id: str,
         nuevo_rol: str,
@@ -188,7 +188,7 @@ class UsuarioService:
         if not usuario_solicitante.get('es_admin', False):
             raise PermissionError("Solo administradores pueden cambiar roles")
         
-        return self.usuario_repo.update(usuario_id, {
+        return await self.usuario_repo.update(usuario_id, {
             'rol': nuevo_rol,
             'es_admin': es_admin
         })

@@ -86,3 +86,18 @@ class DepartamentoResponse(DepartamentoBase):
     class Config:
         """Permite crear el modelo desde objetos de Firestore"""
         from_attributes = True
+
+class AumentoMasivoRequest(BaseModel):
+    """
+    Schema para solicitar un aumento porcentual a todos los departamentos.
+    """
+    porcentaje: float = Field(
+        ..., 
+        gt=0, 
+        description="Porcentaje de aumento (ej. 5.5)"
+    )
+    periodo_inicio: str = Field(
+        ...,
+        pattern=r"^\d{4}-\d{2}$",
+        description="Periodo inicial desde donde aplicar (YYYY-MM)"
+    )

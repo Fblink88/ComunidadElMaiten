@@ -24,7 +24,8 @@ from .departamento import (
     DepartamentoBase,
     DepartamentoCreate,
     DepartamentoUpdate,
-    DepartamentoResponse
+    DepartamentoResponse,
+    AumentoMasivoRequest
 )
 
 from .pago import (

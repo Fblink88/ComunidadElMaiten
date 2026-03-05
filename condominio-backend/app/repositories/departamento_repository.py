@@ -21,7 +21,7 @@ class DepartamentoRepository(BaseRepository):
         """Inicializa el repositorio con la colección 'departamentos'."""
         super().__init__('departamentos')
     
-    def get_by_numero(self, numero: str) -> Optional[Dict[str, Any]]:
+    async def get_by_numero(self, numero: str) -> Optional[Dict[str, Any]]:
         """
         Busca un departamento por su número.
         
@@ -31,19 +31,19 @@ class DepartamentoRepository(BaseRepository):
         Returns:
             Diccionario con los datos del departamento o None
         """
-        results = self.find_by_field('numero', numero, limit=1)
+        results = await self.find_by_field('numero', numero, limit=1)
         return results[0] if results else None
     
-    def get_activos(self) -> List[Dict[str, Any]]:
+    async def get_activos(self) -> List[Dict[str, Any]]:
         """
         Obtiene todos los departamentos activos.
         
         Returns:
             Lista de departamentos con activo=True
         """
-        return self.find_by_field('activo', True)
+        return await self.find_by_field('activo', True)
     
-    def get_usuarios_count(self, departamento_id: str) -> int:
+    async def get_usuarios_count(self, departamento_id: str) -> int:
         """
         Cuenta los usuarios asociados a un departamento.
         
@@ -53,12 +53,12 @@ class DepartamentoRepository(BaseRepository):
         Returns:
             Número de usuarios asociados
         """
-        depto = self.get_by_id(departamento_id)
+        depto = await self.get_by_id(departamento_id)
         if not depto:
             return 0
         return len(depto.get('usuarios_ids', []))
     
-    def agregar_usuario(self, departamento_id: str, usuario_id: str) -> bool:
+    async def agregar_usuario(self, departamento_id: str, usuario_id: str) -> bool:
         """
         Agrega un usuario al departamento.
         
@@ -72,8 +72,9 @@ class DepartamentoRepository(BaseRepository):
             True si se agregó exitosamente, False si falló
         """
         from google.cloud.firestore_v1 import ArrayUnion
+        from starlette.concurrency import run_in_threadpool
         
-        depto = self.get_by_id(departamento_id)
+        depto = await self.get_by_id(departamento_id)
         if not depto:
             return False
         
@@ -88,13 +89,15 @@ class DepartamentoRepository(BaseRepository):
             return False
         
         # Agregar usuario
-        self.collection.document(departamento_id).update({
-            'usuarios_ids': ArrayUnion([usuario_id])
-        })
+        def _update():
+            self.collection.document(departamento_id).update({
+                'usuarios_ids': ArrayUnion([usuario_id])
+            })
+        await run_in_threadpool(_update)
         
         return True
     
-    def remover_usuario(self, departamento_id: str, usuario_id: str) -> bool:
+    async def remover_usuario(self, departamento_id: str, usuario_id: str) -> bool:
         """
         Remueve un usuario del departamento.
         
@@ -106,8 +109,9 @@ class DepartamentoRepository(BaseRepository):
             True si se removió exitosamente, False si falló
         """
         from google.cloud.firestore_v1 import ArrayRemove
+        from starlette.concurrency import run_in_threadpool
         
-        depto = self.get_by_id(departamento_id)
+        depto = await self.get_by_id(departamento_id)
         if not depto:
             return False
         
@@ -118,13 +122,15 @@ class DepartamentoRepository(BaseRepository):
             return False
         
         # Remover usuario
-        self.collection.document(departamento_id).update({
-            'usuarios_ids': ArrayRemove([usuario_id])
-        })
+        def _update():
+            self.collection.document(departamento_id).update({
+                'usuarios_ids': ArrayRemove([usuario_id])
+            })
+        await run_in_threadpool(_update)
         
         return True
     
-    def get_total_metros_cuadrados(self) -> float:
+    async def get_total_metros_cuadrados(self) -> float:
         """
         Calcula el total de metros cuadrados del condominio.
         
@@ -133,5 +139,25 @@ class DepartamentoRepository(BaseRepository):
         Returns:
             Suma de metros cuadrados de todos los departamentos activos
         """
-        departamentos = self.get_activos()
+        departamentos = await self.get_activos()
         return sum(d.get('metros_cuadrados', 0) for d in departamentos)
+        
+    async def actualizar_saldo(self, departamento_id: str, monto: float) -> bool:
+        """
+        Actualiza el saldo a favor de un departamento, sumando o restando el monto indicado.
+        """
+        from starlette.concurrency import run_in_threadpool
+        from google.cloud import firestore
+        
+        def _update():
+            # Usar una transacción simple: leer y luego document.update(...) con Increment es atómico
+            self.collection.document(departamento_id).update({
+                'saldo_a_favor': firestore.Increment(monto)
+            })
+            
+        try:
+            await run_in_threadpool(_update)
+            return True
+        except Exception as e:
+            print(f"Error updating saldo_a_favor for depto {departamento_id}: {e}")
+            return False

@@ -11,8 +11,10 @@ from app.middleware import get_current_user, get_admin_user
 from app.services import DepartamentoService
 from app.models import (
     DepartamentoCreate,
+    DepartamentoCreate,
     DepartamentoUpdate,
-    DepartamentoResponse
+    DepartamentoResponse,
+    AumentoMasivoRequest
 )
 
 router = APIRouter(
@@ -45,7 +47,7 @@ async def crear_departamento(
         Departamento creado
     """
     try:
-        return departamento_service.crear(data)
+        return await departamento_service.crear(data)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -62,7 +64,7 @@ async def listar_departamentos(
     Returns:
         Lista de departamentos
     """
-    return departamento_service.obtener_todos()
+    return await departamento_service.obtener_todos()
 
 
 @router.get("/activos", response_model=List[DepartamentoResponse])
@@ -75,7 +77,7 @@ async def listar_departamentos_activos(
     Returns:
         Lista de departamentos con activo=True
     """
-    return departamento_service.obtener_activos()
+    return await departamento_service.obtener_activos()
 
 
 @router.get("/{departamento_id}", response_model=DepartamentoResponse)
@@ -92,7 +94,7 @@ async def obtener_departamento(
     Returns:
         Datos del departamento
     """
-    depto = departamento_service.obtener_por_id(departamento_id)
+    depto = await departamento_service.obtener_por_id(departamento_id)
     if not depto:
         raise HTTPException(status_code=404, detail="Departamento no encontrado")
     return depto
@@ -209,6 +211,23 @@ async def remover_usuario_de_departamento(
         if success:
             return {"message": "Usuario removido del departamento"}
         raise HTTPException(status_code=400, detail="No se pudo remover el usuario")
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/aumento-masivo", response_model=Dict[str, Any])
+async def aplicar_aumento_masivo(
+    request: AumentoMasivoRequest,
+    current_user: Dict[str, Any] = Depends(get_admin_user)
+):
+    """
+    Aplica un aumento masivo a la cuota mensual de todos los departamentos,
+    afectando a pagos proyectados futuros.
+    """
+    try:
+        resultado = await departamento_service.aplicar_aumento_masivo(request, current_user)
+        return {"message": "Aumento masivo aplicado correctamente", "resultado": resultado}
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:

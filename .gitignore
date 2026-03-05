@@ -1,39 +1,68 @@
-# Python Virtual Environment
-.venv/
-venv/
-__pycache__/
+# =========================================================================
+# IGNORAR TODO EN LA RAÍZ POR DEFECTO
+# =========================================================================
+/*
 
-# Node modules
-node_modules/
+# Excepciones: Carpetas y archivos que SI queremos subir a Git
+!/condominio-app/
+!/condominio-backend/
+!/.gitignore
 
-# Environment variables (IMPORTANTE - NO SUBIR)
+# (Descomenta esto si quieres subir la documentación del proyecto)
+# !/README.md
+# !/*.md
+
+# =========================================================================
+# ARCHIVOS TRANSITORIOS Y DE PRUEBA (Backend)
+# =========================================================================
+/condominio-backend/check_*.py
+/condominio-backend/dump_*.py
+/condominio-backend/fix_*.py
+/condominio-backend/debug_*.py
+/condominio-backend/sync_*.py
+/condominio-backend/importar_*.py
+/condominio-backend/proyectar*.py
+/condominio-backend/test_*.py
+/condominio-backend/verify_*.py
+
+# =========================================================================
+# CREDENCIALES E INFORMACIÓN SENSIBLE (¡CRÍTICO!)
+# =========================================================================
 .env
 .env.local
 .env.*.local
 *.env
-
-# Firebase credentials (CRÍTICO - NO SUBIR)
 *firebase-credentials*.json
 *serviceAccountKey*.json
 *firebase-adminsdk*.json
 
-# Build outputs
+# =========================================================================
+# ENTORNOS VIRTUALES Y DEPENDENCIAS
+# =========================================================================
+.venv/
+venv/
+__pycache__/
+node_modules/
+
+# =========================================================================
+# LOGS Y COMPILACIONES (BUILD)
+# =========================================================================
+*.log
+npm-debug.log*
+logs/
+backend.log
 dist/
 dist-ssr/
 build/
 *.local
 
-# IDE
+# =========================================================================
+# ARCHIVOS DEL SISTEMA E IDEs
+# =========================================================================
 .vscode/
 .idea/
+.claude/
 *.swp
 *.swo
-
-# OS files
 .DS_Store
 Thumbs.db
-
-# Logs
-*.log
-npm-debug.log*
-logs/

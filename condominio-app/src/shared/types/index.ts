@@ -30,9 +30,10 @@ export interface Usuario {
   /** ID del departamento asociado (null si es admin sin depto) */
   departamentoId: string | null
   /** Rol del usuario en el sistema */
-  rol: "admin" | "vecino"
+  rol: "admin" | "vecino" | "propietario" | "arrendatario"
   /** Indica si tiene permisos de administrador */
-  esAdmin: boolean
+  es_admin: boolean
+  esAdmin?: boolean // Legacy soporte
   /** Fecha en que se registró en el sistema */
   fechaRegistro: Date
 }

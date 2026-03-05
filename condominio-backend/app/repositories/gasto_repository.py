@@ -8,6 +8,7 @@ relacionadas con los gastos mensuales y extraordinarios del condominio.
 from typing import Optional, List, Dict, Any
 from .base_repository import BaseRepository
 from app.config import db
+from starlette.concurrency import run_in_threadpool
 
 
 class GastoRepository(BaseRepository):
@@ -26,7 +27,7 @@ class GastoRepository(BaseRepository):
     # GASTOS MENSUALES
     # ============================================
     
-    def create_mensual(self, periodo: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    async def create_mensual(self, periodo: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Crea un gasto mensual usando el periodo como ID.
         
@@ -37,9 +38,9 @@ class GastoRepository(BaseRepository):
         Returns:
             Diccionario con los datos creados
         """
-        return self.create(data, doc_id=periodo)
+        return await self.create(data, doc_id=periodo)
     
-    def get_by_periodo(self, periodo: str) -> Optional[Dict[str, Any]]:
+    async def get_by_periodo(self, periodo: str) -> Optional[Dict[str, Any]]:
         """
         Obtiene el gasto mensual de un periodo específico.
         
@@ -49,9 +50,9 @@ class GastoRepository(BaseRepository):
         Returns:
             Diccionario con el gasto mensual o None
         """
-        return self.get_by_id(periodo)
+        return await self.get_by_id(periodo)
     
-    def get_ultimos_periodos(self, cantidad: int = 12) -> List[Dict[str, Any]]:
+    async def get_ultimos_periodos(self, cantidad: int = 12) -> List[Dict[str, Any]]:
         """
         Obtiene los últimos N gastos mensuales.
         
@@ -61,12 +62,15 @@ class GastoRepository(BaseRepository):
         Returns:
             Lista de gastos mensuales ordenados por periodo descendente
         """
-        docs = (
-            self.collection
-            .order_by('periodo', direction='DESCENDING')
-            .limit(cantidad)
-            .stream()
-        )
+        def _get_stream():
+            return list(
+                self.collection
+                .order_by('periodo', direction='DESCENDING')
+                .limit(cantidad)
+                .stream()
+            )
+            
+        docs = await run_in_threadpool(_get_stream)
         
         return [self._doc_to_dict(doc) for doc in docs if doc.exists]
     
@@ -74,7 +78,7 @@ class GastoRepository(BaseRepository):
     # GASTOS EXTRAORDINARIOS
     # ============================================
     
-    def create_extraordinario(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    async def create_extraordinario(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Crea un gasto extraordinario.
         
@@ -92,11 +96,11 @@ class GastoRepository(BaseRepository):
         data['pagos'] = {}  # Inicializar estado de pagos vacío
         
         doc_ref = self.extraordinarios.document()
-        doc_ref.set(data)
+        await run_in_threadpool(doc_ref.set, data)
         
         return {'id': doc_ref.id, **data}
     
-    def get_extraordinario(self, gasto_id: str) -> Optional[Dict[str, Any]]:
+    async def get_extraordinario(self, gasto_id: str) -> Optional[Dict[str, Any]]:
         """
         Obtiene un gasto extraordinario por su ID.
         
@@ -106,7 +110,7 @@ class GastoRepository(BaseRepository):
         Returns:
             Diccionario con el gasto o None
         """
-        doc = self.extraordinarios.document(gasto_id).get()
+        doc = await run_in_threadpool(self.extraordinarios.document(gasto_id).get)
         
         if not doc.exists:
             return None
@@ -115,7 +119,7 @@ class GastoRepository(BaseRepository):
         data['id'] = doc.id
         return data
     
-    def get_all_extraordinarios(self, limit: int = 50) -> List[Dict[str, Any]]:
+    async def get_all_extraordinarios(self, limit: int = 50) -> List[Dict[str, Any]]:
         """
         Obtiene todos los gastos extraordinarios.
         
@@ -125,12 +129,15 @@ class GastoRepository(BaseRepository):
         Returns:
             Lista de gastos extraordinarios
         """
-        docs = (
-            self.extraordinarios
-            .order_by('fecha', direction='DESCENDING')
-            .limit(limit)
-            .stream()
-        )
+        def _stream():
+            return list(
+                self.extraordinarios
+                .order_by('fecha', direction='DESCENDING')
+                .limit(limit)
+                .stream()
+            )
+            
+        docs = await run_in_threadpool(_stream)
         
         result = []
         for doc in docs:
@@ -141,7 +148,7 @@ class GastoRepository(BaseRepository):
         
         return result
     
-    def marcar_pago_extraordinario(
+    async def marcar_pago_extraordinario(
         self, 
         gasto_id: str, 
         departamento_id: str,
@@ -160,15 +167,18 @@ class GastoRepository(BaseRepository):
         """
         from datetime import datetime
         
-        gasto = self.get_extraordinario(gasto_id)
+        gasto = await self.get_extraordinario(gasto_id)
         if not gasto:
             return False
         
-        self.extraordinarios.document(gasto_id).update({
-            f'pagos.{departamento_id}': {
-                'pagado': pagado,
-                'fecha_pago': datetime.utcnow() if pagado else None
+        await run_in_threadpool(
+            self.extraordinarios.document(gasto_id).update,
+            {
+                f'pagos.{departamento_id}': {
+                    'pagado': pagado,
+                    'fecha_pago': datetime.utcnow() if pagado else None
+                }
             }
-        })
+        )
         
         return True

@@ -2,17 +2,19 @@
 Controlador de Pagos.
 
 Este controlador maneja los endpoints de pagos de gastos comunes,
-incluyendo la integración con Flow.
+incluyendo la integración con Khipu.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List, Dict, Any, Optional
 from app.middleware import get_current_user, get_admin_user
 from app.services import PagoService
+from app.services.khipu_service import khipu_service
 from app.models import (
     PagoCreate,
     PagoResponse
 )
+from app.config import settings
 
 router = APIRouter(
     prefix="/pagos",
@@ -45,12 +47,42 @@ async def crear_pago(
         Pago creado con estado 'pendiente'
     """
     try:
-        return pago_service.crear(data, current_user)
+        return await pago_service.crear(data, current_user)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
+@router.get("", response_model=List[PagoResponse])
+async def listar_pagos(
+    limit: int = 1000,
+    current_user: Dict[str, Any] = Depends(get_admin_user)
+):
+    """
+    Lista todos los pagos (solo admin).
+    """
+    return await pago_service.obtener_todos(limit=limit)
+
+@router.get("/transacciones", response_model=List[Dict[str, Any]])
+async def listar_todas_transacciones(
+    limit: int = 500,
+    current_user: Dict[str, Any] = Depends(get_admin_user)
+):
+    """
+    Lista todos los abonos/transacciones reales (solo admin).
+    """
+    return await pago_service.obtener_todas_transacciones(limit=limit)
+
+@router.get("/transacciones/departamento/{departamento_id}", response_model=List[Dict[str, Any]])
+async def listar_transacciones_departamento(
+    departamento_id: str,
+    current_user: Dict[str, Any] = Depends(get_admin_user)
+):
+    """
+    Lista todos los movimientos/transacciones de la billetera de un departamento específico (solo admin).
+    """
+    return await pago_service.obtener_transacciones_por_departamento(departamento_id, current_user)
 
 @router.get("/mis-pagos", response_model=List[PagoResponse])
 async def obtener_mis_pagos(
@@ -70,7 +102,24 @@ async def obtener_mis_pagos(
             detail="No tienes un departamento asociado"
         )
     
-    return pago_service.obtener_por_departamento(departamento_id, current_user)
+    return await pago_service.obtener_por_departamento(departamento_id, current_user)
+
+@router.get("/mis-transacciones", response_model=List[Dict[str, Any]])
+async def obtener_mis_transacciones(
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """
+    Obtiene el historial de abonos (billetera virtual) del departamento.
+    """
+    departamento_id = current_user.get('departamento_id')
+    
+    if not departamento_id:
+        raise HTTPException(
+            status_code=400,
+            detail="No tienes un departamento asociado"
+        )
+    
+    return await pago_service.obtener_transacciones_por_departamento(departamento_id, current_user)
 
 
 @router.get("/pendientes", response_model=List[PagoResponse])
@@ -85,7 +134,7 @@ async def obtener_pagos_pendientes(
     Returns:
         Lista de pagos pendientes
     """
-    return pago_service.obtener_pendientes()
+    return await pago_service.obtener_pendientes()
 
 
 @router.get("/periodo/{periodo}", response_model=List[PagoResponse])
@@ -104,7 +153,7 @@ async def obtener_pagos_por_periodo(
     Returns:
         Lista de pagos del periodo
     """
-    return pago_service.obtener_por_periodo(periodo)
+    return await pago_service.obtener_por_periodo(periodo)
 
 
 @router.get("/departamento/{departamento_id}", response_model=List[PagoResponse])
@@ -125,7 +174,7 @@ async def obtener_pagos_por_departamento(
         Lista de pagos del departamento
     """
     try:
-        return pago_service.obtener_por_departamento(departamento_id, current_user)
+        return await pago_service.obtener_por_departamento(departamento_id, current_user)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
 
@@ -144,7 +193,7 @@ async def obtener_pago(
     Returns:
         Datos del pago
     """
-    pago = pago_service.obtener_por_id(pago_id)
+    pago = await pago_service.obtener_por_id(pago_id)
     
     if not pago:
         raise HTTPException(status_code=404, detail="Pago no encontrado")
@@ -183,7 +232,7 @@ async def verificar_pago_manual(
         Pago actualizado
     """
     try:
-        pago = pago_service.verificar_pago_manual(
+        pago = await pago_service.verificar_pago_manual(
             pago_id,
             aprobado,
             notas,
@@ -195,28 +244,5 @@ async def verificar_pago_manual(
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
 
-
-@router.post("/webhook/flow")
-async def webhook_flow(payload: Dict[str, Any]):
-    """
-    Webhook para recibir notificaciones de Flow.
-    
-    Flow llama a este endpoint cuando el estado de un pago cambia.
-    
-    Args:
-        payload: Datos enviados por Flow
-        
-    Returns:
-        Confirmación de recepción
-    """
-    # TODO: Implementar verificación de firma de Flow
-    # TODO: Implementar lógica de actualización de pago
-    
-    pago_id = payload.get('commerceOrder')
-    flow_payment_id = payload.get('flowOrder')
-    estado = payload.get('status')
-    
-    if pago_id and flow_payment_id:
-        pago_service.actualizar_desde_flow(pago_id, flow_payment_id, estado)
-    
-    return {"received": True}
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))

@@ -19,6 +19,7 @@ class EstadoPago(str, Enum):
     PAGADO = "pagado"
     VERIFICANDO = "verificando"
     RECHAZADO = "rechazado"
+    PROYECTADO = "proyectado"
 
 
 class MetodoPago(str, Enum):
@@ -26,7 +27,10 @@ class MetodoPago(str, Enum):
     Métodos de pago disponibles.
     """
     FLOW = "flow"
+    KHIPU = "khipu"
     TRANSFERENCIA_MANUAL = "transferencia_manual"
+    IMPORTACION_HISTORICA = "importacion_historica"
+    AJUSTE_MANUAL = "ajuste_manual"
 
 
 class PagoBase(BaseModel):
@@ -56,7 +60,7 @@ class PagoCreate(PagoBase):
     El estado inicial siempre es 'pendiente'.
     """
     metodo: MetodoPago = Field(
-        default=MetodoPago.FLOW,
+        default=MetodoPago.KHIPU,
         description="Método de pago a utilizar"
     )
 
@@ -85,14 +89,15 @@ class PagoResponse(PagoBase):
     """
     id: str = Field(..., description="ID único del pago")
     estado: EstadoPago = Field(..., description="Estado actual del pago")
-    metodo: MetodoPago = Field(..., description="Método de pago utilizado")
-    flow_payment_id: Optional[str] = Field(
+    metodo: Optional[MetodoPago] = Field(None, description="Método de pago utilizado")
+    monto_pagado: Optional[float] = Field(0, description="Monto ya pagado del total")
+    khipu_payment_id: Optional[str] = Field(
         None,
-        description="ID de transacción de Flow (si aplica)"
+        description="ID de transacción de Khipu (si aplica)"
     )
-    flow_payment_url: Optional[str] = Field(
+    khipu_payment_url: Optional[str] = Field(
         None,
-        description="URL de pago de Flow (si aplica)"
+        description="URL de pago de Khipu (si aplica)"
     )
     fecha_pago: Optional[datetime] = Field(
         None,
@@ -103,7 +108,17 @@ class PagoResponse(PagoBase):
         description="ID del admin que verificó el pago"
     )
     notas: Optional[str] = None
-    created_at: datetime = Field(..., description="Fecha de creación del registro")
+    created_at: Optional[datetime] = Field(
+        None, 
+        description="Fecha de creación del registro"
+    )
+    updated_at: Optional[datetime] = Field(
+        None,
+        description="Fecha de actualización"
+    )
 
-    class Config:
-        from_attributes = True
+    model_config = {
+        "populate_by_name": True,
+        "extra": "ignore",
+        "from_attributes": True
+    }

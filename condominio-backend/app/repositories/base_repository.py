@@ -11,6 +11,7 @@ de base de datos.
 from typing import TypeVar, Generic, Optional, List, Dict, Any
 from google.cloud.firestore_v1 import DocumentSnapshot
 from datetime import datetime
+from starlette.concurrency import run_in_threadpool
 from app.config import db
 
 # Tipo genérico para los modelos
@@ -58,7 +59,7 @@ class BaseRepository(Generic[T]):
         data['id'] = doc.id
         return data
     
-    def create(self, data: Dict[str, Any], doc_id: Optional[str] = None) -> Dict[str, Any]:
+    async def create(self, data: Dict[str, Any], doc_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Crea un nuevo documento en la colección.
         
@@ -77,15 +78,15 @@ class BaseRepository(Generic[T]):
         if doc_id:
             # Usar ID específico
             doc_ref = self.collection.document(doc_id)
-            doc_ref.set(data)
+            await run_in_threadpool(doc_ref.set, data)
         else:
             # Generar ID automático
             doc_ref = self.collection.document()
-            doc_ref.set(data)
+            await run_in_threadpool(doc_ref.set, data)
         
         return {'id': doc_ref.id, **data}
     
-    def get_by_id(self, doc_id: str) -> Optional[Dict[str, Any]]:
+    async def get_by_id(self, doc_id: str) -> Optional[Dict[str, Any]]:
         """
         Obtiene un documento por su ID.
         
@@ -95,10 +96,10 @@ class BaseRepository(Generic[T]):
         Returns:
             Diccionario con los datos del documento o None si no existe
         """
-        doc = self.collection.document(doc_id).get()
+        doc = await run_in_threadpool(self.collection.document(doc_id).get)
         return self._doc_to_dict(doc)
     
-    def get_all(self, limit: int = 100) -> List[Dict[str, Any]]:
+    async def get_all(self, limit: int = 100) -> List[Dict[str, Any]]:
         """
         Obtiene todos los documentos de la colección.
         
@@ -108,10 +109,14 @@ class BaseRepository(Generic[T]):
         Returns:
             Lista de diccionarios con los datos de los documentos
         """
-        docs = self.collection.limit(limit).stream()
+        # Convert block to run stream in a thread
+        def _get_stream():
+            return list(self.collection.limit(limit).stream())
+        
+        docs = await run_in_threadpool(_get_stream)
         return [self._doc_to_dict(doc) for doc in docs if doc.exists]
     
-    def update(self, doc_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    async def update(self, doc_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Actualiza un documento existente.
         
@@ -123,7 +128,7 @@ class BaseRepository(Generic[T]):
             Diccionario con los datos actualizados o None si no existe
         """
         doc_ref = self.collection.document(doc_id)
-        doc = doc_ref.get()
+        doc = await run_in_threadpool(doc_ref.get)
         
         if not doc.exists:
             return None
@@ -134,12 +139,12 @@ class BaseRepository(Generic[T]):
         # Filtrar valores None para no sobrescribir con nulos
         data = {k: v for k, v in data.items() if v is not None}
         
-        doc_ref.update(data)
+        await run_in_threadpool(doc_ref.update, data)
         
         # Retornar documento actualizado
-        return self.get_by_id(doc_id)
+        return await self.get_by_id(doc_id)
     
-    def delete(self, doc_id: str) -> bool:
+    async def delete(self, doc_id: str) -> bool:
         """
         Elimina un documento por su ID.
         
@@ -150,15 +155,15 @@ class BaseRepository(Generic[T]):
             True si se eliminó, False si no existía
         """
         doc_ref = self.collection.document(doc_id)
-        doc = doc_ref.get()
+        doc = await run_in_threadpool(doc_ref.get)
         
         if not doc.exists:
             return False
         
-        doc_ref.delete()
+        await run_in_threadpool(doc_ref.delete)
         return True
     
-    def exists(self, doc_id: str) -> bool:
+    async def exists(self, doc_id: str) -> bool:
         """
         Verifica si un documento existe.
         
@@ -168,10 +173,10 @@ class BaseRepository(Generic[T]):
         Returns:
             True si existe, False si no
         """
-        doc = self.collection.document(doc_id).get()
+        doc = await run_in_threadpool(self.collection.document(doc_id).get)
         return doc.exists
     
-    def find_by_field(
+    async def find_by_field(
         self, 
         field: str, 
         value: Any, 
@@ -188,10 +193,13 @@ class BaseRepository(Generic[T]):
         Returns:
             Lista de documentos que coinciden
         """
-        docs = (
-            self.collection
-            .where(field, '==', value)
-            .limit(limit)
-            .stream()
-        )
+        def _stream():
+            return list(
+                self.collection
+                .where(field, '==', value)
+                .limit(limit)
+                .stream()
+            )
+            
+        docs = await run_in_threadpool(_stream)
         return [self._doc_to_dict(doc) for doc in docs if doc.exists]

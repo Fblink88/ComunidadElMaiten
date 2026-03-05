@@ -1,0 +1,5 @@
+export { ListaPagos } from "./ListaPagos"
+export { DetallePago } from "./DetallePago"
+export { ListaTransacciones } from "./ListaTransacciones"
+export { MatrizDeudas } from "./MatrizDeudas"
+export { PagosPorVerificar } from "./PagosPorVerificar"

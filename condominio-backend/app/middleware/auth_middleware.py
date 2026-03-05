@@ -39,7 +39,7 @@ async def get_current_user(
     token = credentials.credentials
     
     # Verificar token con Firebase
-    usuario = auth_service.obtener_usuario_por_token(token)
+    usuario = await auth_service.obtener_usuario_por_token(token)
     
     if not usuario:
         raise HTTPException(

@@ -28,7 +28,7 @@ class GastoService:
     # GASTOS MENSUALES
     # ============================================
     
-    def crear_gasto_mensual(
+    async def crear_gasto_mensual(
         self,
         data: GastoMensualCreate,
         usuario_solicitante: Dict[str, Any]
@@ -51,7 +51,7 @@ class GastoService:
             raise PermissionError("Solo administradores pueden crear gastos")
         
         # Verificar que no exista gasto para ese periodo
-        existente = self.gasto_repo.get_by_periodo(data.periodo)
+        existente = await self.gasto_repo.get_by_periodo(data.periodo)
         if existente:
             raise ValueError(f"Ya existe un gasto para el periodo {data.periodo}")
         
@@ -59,7 +59,7 @@ class GastoService:
         total = sum(item.monto for item in data.items)
         
         # Obtener total de metros cuadrados
-        total_m2 = self.depto_repo.get_total_metros_cuadrados()
+        total_m2 = await self.depto_repo.get_total_metros_cuadrados()
         if total_m2 == 0:
             raise ValueError("No hay departamentos activos para distribuir gastos")
         
@@ -75,37 +75,42 @@ class GastoService:
         }
         
         # Crear gasto mensual
-        gasto = self.gasto_repo.create_mensual(data.periodo, gasto_data)
+        gasto = await self.gasto_repo.create_mensual(data.periodo, gasto_data)
         
         # Generar pagos pendientes para cada departamento
-        self._generar_pagos_departamentos(data.periodo, valor_por_m2)
+        await self._generar_pagos_departamentos(data.periodo, valor_por_m2)
         
         return gasto
     
-    def _generar_pagos_departamentos(self, periodo: str, valor_por_m2: float):
+    async def _generar_pagos_departamentos(self, periodo: str, valor_por_m2: float):
         """
         Genera los pagos pendientes para cada departamento activo.
-        
-        Args:
-            periodo: Periodo del gasto
-            valor_por_m2: Valor calculado por metro cuadrado
         """
-        departamentos = self.depto_repo.get_activos()
+        departamentos = await self.depto_repo.get_activos()
         
         for depto in departamentos:
-            # Calcular monto según metros cuadrados
+            # Calcular monto neto según metros cuadrados y actualizar cuota_mensual
             m2 = depto.get('metros_cuadrados', 0)
             monto = round(m2 * valor_por_m2)
+            await self.depto_repo.update(depto['id'], {'cuota_mensual': monto})
             
-            # Verificar que no exista pago para ese periodo
-            existente = self.pago_repo.get_by_departamento_y_periodo(
+            # Verificar si existe pago (como "proyectado" u otro estado)
+            existente = await self.pago_repo.get_by_departamento_y_periodo(
                 depto['id'], 
                 periodo
             )
             
-            if not existente:
-                # Crear pago pendiente
-                self.pago_repo.create({
+            pago_id = None
+            if existente:
+                pago_id = existente.get('id')
+                if existente.get('estado') == 'proyectado':
+                    # Transformar proyectado a pendiente
+                    await self.pago_repo.update(pago_id, {'estado': 'pendiente', 'monto': monto})
+                elif existente.get('estado') in ['pendiente', 'pagado', 'verificando']:
+                    continue # Ya existe y es válido
+            else:
+                # Crear nuevo pago
+                nuevo = await self.pago_repo.create({
                     'departamento_id': depto['id'],
                     'periodo': periodo,
                     'monto': monto,
@@ -114,11 +119,22 @@ class GastoService:
                     'flow_payment_id': None,
                     'fecha_pago': None
                 })
-            
-            # Actualizar cuota mensual del departamento
-            self.depto_repo.update(depto['id'], {'cuota_mensual': monto})
+                pago_id = nuevo.get('id')
+                
+            # Aplicar Saldo a Favor si lo hay
+            saldo_a_favor = float(depto.get('saldo_a_favor', 0))
+            if saldo_a_favor > 0 and pago_id:
+                if saldo_a_favor >= monto:
+                    # Cubre toda la cuota
+                    await self.pago_repo.marcar_como_pagado(pago_id, notas="Pagado con saldo a favor")
+                    await self.depto_repo.actualizar_saldo(depto['id'], -float(monto))
+                else:
+                    # Pago parcial: reducimos la deuda y consumimos todo el saldo
+                    nuevo_monto = monto - saldo_a_favor
+                    await self.pago_repo.update(pago_id, {'monto': round(nuevo_monto)})
+                    await self.depto_repo.actualizar_saldo(depto['id'], -saldo_a_favor)
     
-    def obtener_gasto_mensual(self, periodo: str) -> Optional[Dict[str, Any]]:
+    async def obtener_gasto_mensual(self, periodo: str) -> Optional[Dict[str, Any]]:
         """
         Obtiene el gasto mensual de un periodo.
         
@@ -128,9 +144,9 @@ class GastoService:
         Returns:
             Diccionario con el gasto o None
         """
-        return self.gasto_repo.get_by_periodo(periodo)
+        return await self.gasto_repo.get_by_periodo(periodo)
     
-    def obtener_ultimos_gastos(self, cantidad: int = 12) -> List[Dict[str, Any]]:
+    async def obtener_ultimos_gastos(self, cantidad: int = 12) -> List[Dict[str, Any]]:
         """
         Obtiene los últimos gastos mensuales.
         
@@ -140,13 +156,13 @@ class GastoService:
         Returns:
             Lista de gastos mensuales
         """
-        return self.gasto_repo.get_ultimos_periodos(cantidad)
+        return await self.gasto_repo.get_ultimos_periodos(cantidad)
     
     # ============================================
     # GASTOS EXTRAORDINARIOS
     # ============================================
     
-    def crear_gasto_extraordinario(
+    async def crear_gasto_extraordinario(
         self,
         data: GastoExtraordinarioCreate,
         usuario_solicitante: Dict[str, Any]
@@ -169,9 +185,9 @@ class GastoService:
         
         gasto_data = data.model_dump()
         
-        return self.gasto_repo.create_extraordinario(gasto_data)
+        return await self.gasto_repo.create_extraordinario(gasto_data)
     
-    def obtener_gasto_extraordinario(self, gasto_id: str) -> Optional[Dict[str, Any]]:
+    async def obtener_gasto_extraordinario(self, gasto_id: str) -> Optional[Dict[str, Any]]:
         """
         Obtiene un gasto extraordinario por su ID.
         
@@ -181,18 +197,18 @@ class GastoService:
         Returns:
             Diccionario con el gasto o None
         """
-        return self.gasto_repo.get_extraordinario(gasto_id)
+        return await self.gasto_repo.get_extraordinario(gasto_id)
     
-    def obtener_gastos_extraordinarios(self) -> List[Dict[str, Any]]:
+    async def obtener_gastos_extraordinarios(self) -> List[Dict[str, Any]]:
         """
         Obtiene todos los gastos extraordinarios.
         
         Returns:
             Lista de gastos extraordinarios
         """
-        return self.gasto_repo.get_all_extraordinarios()
+        return await self.gasto_repo.get_all_extraordinarios()
     
-    def marcar_pago_extraordinario(
+    async def marcar_pago_extraordinario(
         self,
         gasto_id: str,
         departamento_id: str,
@@ -215,4 +231,4 @@ class GastoService:
         if not usuario_solicitante.get('es_admin', False):
             raise PermissionError("Solo administradores pueden marcar pagos extraordinarios")
         
-        return self.gasto_repo.marcar_pago_extraordinario(gasto_id, departamento_id)
+        return await self.gasto_repo.marcar_pago_extraordinario(gasto_id, departamento_id)

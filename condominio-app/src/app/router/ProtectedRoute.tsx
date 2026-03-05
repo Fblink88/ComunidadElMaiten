@@ -21,6 +21,8 @@ interface ProtectedRouteProps {
   children: ReactNode
   /** Si es true, solo permite acceso a administradores */
   adminOnly?: boolean
+  /** Si es true, permite acceso aunque el usuario no esté activo */
+  allowInactive?: boolean
 }
 
 /**
@@ -38,20 +40,27 @@ interface ProtectedRouteProps {
  *   <AdminPage />
  * </ProtectedRoute>
  */
-export const ProtectedRoute = ({ children, adminOnly = false }: ProtectedRouteProps) => {
-  const { usuario } = useAuth()
+export const ProtectedRoute = ({ children, adminOnly = false, allowInactive = false }: ProtectedRouteProps) => {
+  const { usuario, firebaseUser } = useAuth()
 
   /**
-   * Si no hay usuario autenticado, redirige a login.
+   * Si no hay firebaseUser, redirige a login.
    */
-  if (!usuario) {
+  if (!firebaseUser) {
     return <Navigate to="/login" replace />
+  }
+
+  // Si requiere usuario cargado y no está (o no está activo)
+  if (!usuario && !allowInactive) {
+    // Retornamos null temporalmente mientras carga o Navigate a pending, 
+    // pero AppRouter ya maneja la lógica base. 
+    return <Navigate to="/pending-approval" replace />
   }
 
   /**
    * Si la ruta es solo para admin y el usuario no es admin, redirige al dashboard.
    */
-  if (adminOnly && !usuario.esAdmin) {
+  if (adminOnly && !(usuario?.es_admin || usuario?.esAdmin || firebaseUser.email === "edificio.elmaiten@gmail.com")) {
     return <Navigate to="/dashboard" replace />
   }
 

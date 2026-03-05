@@ -23,7 +23,7 @@ class DepartamentoService:
         self.depto_repo = DepartamentoRepository()
         self.usuario_repo = UsuarioRepository()
     
-    def crear(self, data: DepartamentoCreate) -> Dict[str, Any]:
+    async def crear(self, data: DepartamentoCreate) -> Dict[str, Any]:
         """
         Crea un nuevo departamento.
         
@@ -37,7 +37,7 @@ class DepartamentoService:
             ValueError: Si el número de departamento ya existe
         """
         # Verificar que no exista otro con el mismo número
-        existente = self.depto_repo.get_by_numero(data.numero)
+        existente = await self.depto_repo.get_by_numero(data.numero)
         if existente:
             raise ValueError(f"Ya existe un departamento con número {data.numero}")
         
@@ -45,9 +45,9 @@ class DepartamentoService:
         depto_data = data.model_dump()
         depto_data['usuarios_ids'] = []
         
-        return self.depto_repo.create(depto_data)
+        return await self.depto_repo.create(depto_data)
     
-    def obtener_por_id(self, departamento_id: str) -> Optional[Dict[str, Any]]:
+    async def obtener_por_id(self, departamento_id: str) -> Optional[Dict[str, Any]]:
         """
         Obtiene un departamento por su ID.
         
@@ -57,27 +57,27 @@ class DepartamentoService:
         Returns:
             Diccionario con el departamento o None
         """
-        return self.depto_repo.get_by_id(departamento_id)
+        return await self.depto_repo.get_by_id(departamento_id)
     
-    def obtener_todos(self) -> List[Dict[str, Any]]:
+    async def obtener_todos(self) -> List[Dict[str, Any]]:
         """
         Obtiene todos los departamentos.
         
         Returns:
             Lista de todos los departamentos
         """
-        return self.depto_repo.get_all()
+        return await self.depto_repo.get_all()
     
-    def obtener_activos(self) -> List[Dict[str, Any]]:
+    async def obtener_activos(self) -> List[Dict[str, Any]]:
         """
         Obtiene todos los departamentos activos.
         
         Returns:
             Lista de departamentos activos
         """
-        return self.depto_repo.get_activos()
+        return await self.depto_repo.get_activos()
     
-    def actualizar(
+    async def actualizar(
         self, 
         departamento_id: str, 
         data: DepartamentoUpdate
@@ -97,16 +97,16 @@ class DepartamentoService:
         """
         # Si se está actualizando el número, verificar que no exista
         if data.numero:
-            existente = self.depto_repo.get_by_numero(data.numero)
+            existente = await self.depto_repo.get_by_numero(data.numero)
             if existente and existente['id'] != departamento_id:
                 raise ValueError(f"Ya existe un departamento con número {data.numero}")
         
         # Filtrar solo campos con valor
         update_data = data.model_dump(exclude_unset=True)
         
-        return self.depto_repo.update(departamento_id, update_data)
+        return await self.depto_repo.update(departamento_id, update_data)
     
-    def eliminar(self, departamento_id: str) -> bool:
+    async def eliminar(self, departamento_id: str) -> bool:
         """
         Elimina un departamento.
         
@@ -120,13 +120,13 @@ class DepartamentoService:
             ValueError: Si el departamento tiene usuarios asociados
         """
         # Verificar que no tenga usuarios asociados
-        usuarios = self.usuario_repo.get_by_departamento(departamento_id)
+        usuarios = await self.usuario_repo.get_by_departamento(departamento_id)
         if usuarios:
             raise ValueError("No se puede eliminar un departamento con usuarios asociados")
         
-        return self.depto_repo.delete(departamento_id)
+        return await self.depto_repo.delete(departamento_id)
     
-    def agregar_usuario(
+    async def agregar_usuario(
         self, 
         departamento_id: str, 
         usuario_id: str,
@@ -158,20 +158,20 @@ class DepartamentoService:
             raise PermissionError("No tienes permisos para agregar usuarios a este departamento")
         
         # Verificar límite de 5 usuarios
-        count = self.depto_repo.get_usuarios_count(departamento_id)
+        count = await self.depto_repo.get_usuarios_count(departamento_id)
         if count >= 5:
             raise ValueError("El departamento ya tiene el máximo de 5 usuarios")
         
         # Agregar usuario
-        success = self.depto_repo.agregar_usuario(departamento_id, usuario_id)
+        success = await self.depto_repo.agregar_usuario(departamento_id, usuario_id)
         
         if success:
             # Actualizar el departamento_id del usuario
-            self.usuario_repo.update(usuario_id, {'departamento_id': departamento_id})
+            await self.usuario_repo.update(usuario_id, {'departamento_id': departamento_id})
         
         return success
     
-    def remover_usuario(
+    async def remover_usuario(
         self, 
         departamento_id: str, 
         usuario_id: str,
@@ -206,15 +206,15 @@ class DepartamentoService:
             raise ValueError("No puedes removerte a ti mismo del departamento")
         
         # Remover usuario
-        success = self.depto_repo.remover_usuario(departamento_id, usuario_id)
+        success = await self.depto_repo.remover_usuario(departamento_id, usuario_id)
         
         if success:
             # Limpiar el departamento_id del usuario
-            self.usuario_repo.update(usuario_id, {'departamento_id': None})
+            await self.usuario_repo.update(usuario_id, {'departamento_id': None})
         
         return success
     
-    def calcular_cuotas(self, total_gastos: int) -> Dict[str, int]:
+    async def calcular_cuotas(self, total_gastos: int) -> Dict[str, int]:
         """
         Calcula la cuota de cada departamento basado en metros cuadrados.
         
@@ -224,7 +224,7 @@ class DepartamentoService:
         Returns:
             Diccionario {departamento_id: cuota_mensual}
         """
-        departamentos = self.obtener_activos()
+        departamentos = await self.obtener_activos()
         total_m2 = sum(d.get('metros_cuadrados', 0) for d in departamentos)
         
         if total_m2 == 0:
@@ -239,3 +239,68 @@ class DepartamentoService:
             cuotas[depto['id']] = cuota
         
         return cuotas
+
+    async def aplicar_aumento_masivo(
+        self,
+        request: Any,
+        usuario_solicitante: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Aplica un aumento masivo a la cuota mensual de todos los departamentos,
+        afectando a pagos proyectados futuros si existen.
+        """
+        if not usuario_solicitante.get('es_admin', False):
+            raise PermissionError("Solo administradores pueden aplicar un aumento masivo")
+            
+        departamentos = await self.obtener_activos()
+        
+        factor = 1 + (request.porcentaje / 100)
+        
+        deptos_actualizados = 0
+        from app.repositories.pago_repository import PagoRepository
+        pago_repo = PagoRepository()
+        
+        for depto in departamentos:
+            actual_cuota = depto.get('cuota_mensual', 0)
+            nueva_cuota = round(actual_cuota * factor)
+            
+            await self.depto_repo.update(depto['id'], {'cuota_mensual': nueva_cuota})
+            deptos_actualizados += 1
+            
+            # Actualizar pagos proyectados futuros
+            pagos = await pago_repo.get_by_departamento(depto['id'])
+            # Assuming format YYYY-MM
+            futuros = [p for p in pagos if p.get('estado') == 'proyectado' and p.get('periodo', '') >= request.periodo_inicio]
+            for p in futuros:
+                await pago_repo.update(p['id'], {'monto': nueva_cuota})
+                
+        return {
+            "departamentos_actualizados": deptos_actualizados,
+            "porcentaje_aplicado": request.porcentaje,
+            "periodo_inicio": request.periodo_inicio
+        }
+        
+    async def ajustar_saldo(self, departamento_id: str, request: Any, usuario_solicitante: Dict[str, Any]) -> Dict[str, Any]:
+        if not usuario_solicitante.get('es_admin', False):
+            raise PermissionError("Solo admin puede ajustar saldo manualmente")
+        
+        from app.repositories.billetera_repository import BilleteraRepository
+        b_repo = BilleteraRepository()
+        
+        movimiento = await b_repo.create_movimiento(
+            departamento_id,
+            request.tipo,
+            request.monto,
+            request.motivo,
+            usuario_solicitante['id']
+        )
+        
+        monto_ajuste = request.monto if request.tipo == 'ingreso' else -request.monto
+        await self.depto_repo.actualizar_saldo(departamento_id, monto_ajuste)
+        
+        return movimiento
+        
+    async def obtener_historial_billetera(self, departamento_id: str, usuario_solicitante: Dict[str, Any]) -> List[Dict[str, Any]]:
+        from app.repositories.billetera_repository import BilleteraRepository
+        b_repo = BilleteraRepository()
+        return await b_repo.get_by_departamento(departamento_id)

@@ -10,3 +10,12 @@
  */
 
 export { auth, db } from "../config/firebase"
+
+export * from "./auth.api"
+export * from "./departamentos.api"
+export * from "./usuarios.api"
+export * from "./pagos.api"
+export * from "./gastos.api"
+export * from "./admin.api"
+export * from "./dashboard.api"
+export * from "./autorizaciones.api"

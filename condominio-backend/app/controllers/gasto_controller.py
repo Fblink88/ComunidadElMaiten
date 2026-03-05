@@ -51,7 +51,7 @@ async def crear_gasto_mensual(
         Gasto mensual creado
     """
     try:
-        return gasto_service.crear_gasto_mensual(data, current_user)
+        return await gasto_service.crear_gasto_mensual(data, current_user)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
@@ -72,7 +72,7 @@ async def listar_gastos_mensuales(
     Returns:
         Lista de gastos mensuales
     """
-    return gasto_service.obtener_ultimos_gastos(cantidad)
+    return await gasto_service.obtener_ultimos_gastos(cantidad)
 
 
 @router.get("/mensuales/{periodo}", response_model=GastoMensualResponse)
@@ -89,7 +89,7 @@ async def obtener_gasto_mensual(
     Returns:
         Datos del gasto mensual
     """
-    gasto = gasto_service.obtener_gasto_mensual(periodo)
+    gasto = await gasto_service.obtener_gasto_mensual(periodo)
     
     if not gasto:
         raise HTTPException(
@@ -125,7 +125,7 @@ async def crear_gasto_extraordinario(
         Gasto extraordinario creado
     """
     try:
-        return gasto_service.crear_gasto_extraordinario(data, current_user)
+        return await gasto_service.crear_gasto_extraordinario(data, current_user)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
 
@@ -140,7 +140,7 @@ async def listar_gastos_extraordinarios(
     Returns:
         Lista de gastos extraordinarios
     """
-    return gasto_service.obtener_gastos_extraordinarios()
+    return await gasto_service.obtener_gastos_extraordinarios()
 
 
 @router.get("/extraordinarios/{gasto_id}", response_model=GastoExtraordinarioResponse)
@@ -157,7 +157,7 @@ async def obtener_gasto_extraordinario(
     Returns:
         Datos del gasto extraordinario
     """
-    gasto = gasto_service.obtener_gasto_extraordinario(gasto_id)
+    gasto = await gasto_service.obtener_gasto_extraordinario(gasto_id)
     
     if not gasto:
         raise HTTPException(status_code=404, detail="Gasto extraordinario no encontrado")
@@ -184,7 +184,7 @@ async def marcar_pago_extraordinario(
         Confirmación del pago
     """
     try:
-        success = gasto_service.marcar_pago_extraordinario(
+        success = await gasto_service.marcar_pago_extraordinario(
             gasto_id,
             departamento_id,
             current_user

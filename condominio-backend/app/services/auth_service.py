@@ -40,7 +40,7 @@ class AuthService:
         except Exception:
             return None
     
-    def obtener_usuario_por_token(self, token: str) -> Optional[Dict[str, Any]]:
+    async def obtener_usuario_por_token(self, token: str) -> Optional[Dict[str, Any]]:
         """
         Obtiene el usuario completo a partir de un token.
         
@@ -60,7 +60,7 @@ class AuthService:
         if not uid:
             return None
         
-        return self.usuario_repo.get_by_id(uid)
+        return await self.usuario_repo.get_by_id(uid)
     
     def es_admin(self, usuario: Dict[str, Any]) -> bool:
         """

@@ -31,6 +31,16 @@ class Settings(BaseSettings):
     # CORS - Orígenes permitidos para el frontend
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
     
+    # Khipu
+    khipu_receiver_id: str = ""
+    khipu_secret: str = ""
+    khipu_api_key: str = ""
+    khipu_api_url: str = "https://payment-api.khipu.com/v3"
+
+    # Emails (Resend)
+    resend_api_key: str = ""
+    admin_email: str = "edificio.elmaiten@gmail.com"
+    
     @property
     def cors_origins_list(self) -> List[str]:
         """
@@ -56,6 +66,7 @@ class Settings(BaseSettings):
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = False
+        extra = "ignore"
 
 
 # Instancia global de configuración
