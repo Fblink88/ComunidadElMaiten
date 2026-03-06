@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { Card, Spinner } from "@/shared/ui"
-import { getAllTransacciones, getDepartamentos } from "@/shared/api"
+import { getAllTransacciones, getDepartamentos, getGlobalHistorialBilletera } from "@/shared/api"
 
 type MovimientoUnificado = {
     id: string;
@@ -42,9 +42,10 @@ export const ListaTransacciones = () => {
         setIsLoading(true)
         setError(null)
         try {
-            const [transData, deptosData] = await Promise.all([
+            const [transData, deptosData, billData] = await Promise.all([
                 getAllTransacciones(),
-                getDepartamentos()
+                getDepartamentos(),
+                getGlobalHistorialBilletera()
             ])
 
             const mapa: Record<string, string> = {}
@@ -52,7 +53,8 @@ export const ListaTransacciones = () => {
                 mapa[d.id] = d.numero
             })
 
-            const unificados: MovimientoUnificado[] = transData.map(t => ({
+            // Transacciones normales
+            const fromTrans: MovimientoUnificado[] = transData.map(t => ({
                 id: t.id,
                 departamento_id: t.departamento_id,
                 fecha: t.fecha,
@@ -60,10 +62,34 @@ export const ListaTransacciones = () => {
                 metodo: t.metodo,
                 notas: t.notas || '-',
                 tipo: (t.monto_total < 0 ? 'ajuste' : 'abono') as 'ajuste' | 'abono'
-            })).sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
+            }))
+
+            // Movimientos de billetera (ajustes manuales)
+            const fromBill: MovimientoUnificado[] = billData.map(b => ({
+                id: b.id,
+                departamento_id: b.departamento_id,
+                fecha: b.fecha,
+                monto: b.monto_cambio,
+                metodo: 'ajuste_manual',
+                notas: b.motivo || 'Ajuste manual',
+                tipo: (b.monto_cambio < 0 ? 'ajuste' : 'abono') as 'ajuste' | 'abono'
+            }))
+
+            // Unificar con deduplicación (dual-write: mismo monto+notas en +-2s = duplicado)
+            const todos = [...fromTrans]
+            for (const bm of fromBill) {
+                const isDuplicate = fromTrans.some(t =>
+                    t.departamento_id === bm.departamento_id &&
+                    t.monto === bm.monto &&
+                    t.notas === bm.notas &&
+                    Math.abs(new Date(t.fecha).getTime() - new Date(bm.fecha).getTime()) < 2000
+                )
+                if (!isDuplicate) todos.push(bm)
+            }
+            todos.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
 
             setDeptosMap(mapa)
-            setTransacciones(unificados)
+            setTransacciones(todos)
         } catch (err) {
             setError(err instanceof Error ? err.message : "Error al cargar el historial de abonos")
         } finally {

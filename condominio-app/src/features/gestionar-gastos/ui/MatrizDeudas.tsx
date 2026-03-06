@@ -130,23 +130,24 @@ export const MatrizDeudas = ({ onSeleccionarPago }: MatrizDeudasProps) => {
                 }
                 return "bg-green-50 text-green-700"
             case "verificando": return "bg-yellow-50 text-yellow-700"
-            case "rechazado": return "bg-red-100 text-red-800"
-            case "pendiente":
-                // Si la deuda es de este mes o de un período futuro, y aún no ha terminado, no la pintamos con fondo rojo de 'moroso'
-                // Solo pintamos rojo intenso si ya está derechamente atrasado (meses anteriores)
+            case "rechazado":
+            case "pendiente": {
+                const deudaRestante = deudasCalculadas.celdas[pago.id]
+                // Si la cascada cubrió toda la deuda con saldo a favor → pagado (verde)
+                if (deudaRestante === 0) {
+                    return "bg-green-50 text-green-700"
+                }
+                // Deuda parcial o total → rojo
                 const [pagoAnio, pagoMes] = pago.periodo.split('-').map(Number)
                 const hoy = new Date()
-                // Asumimos que si estamos en el mismo mes y año de la deuda, no es "morosa" aún sino "al día a facturar"
-                // A menos que sea más vieja que el mes actual.
                 const esDeudaRecienteOFutura = (pagoAnio === hoy.getFullYear() && pagoMes >= hoy.getMonth() + 1) || (pagoAnio > hoy.getFullYear())
-
                 if (esDeudaRecienteOFutura) {
-                    return "bg-white text-red-600 font-medium border border-red-100" // Blanco con texto rojo para distinguirlo pero no gritar "MOROSO"
+                    return "bg-white text-red-600 font-medium border border-red-100"
                 } else {
-                    return "bg-red-50 text-red-700" // Atrasado
+                    return "bg-red-50 text-red-700"
                 }
+            }
             case "proyectado":
-                // Si la celda bajó a cero por saldo a favor, lo mostramos verde pastel suave
                 if (pago && deudasCalculadas.celdas[pago.id] === 0) {
                     return "bg-green-50/50 text-green-600/70 italic font-medium"
                 }
@@ -229,7 +230,9 @@ export const MatrizDeudas = ({ onSeleccionarPago }: MatrizDeudasProps) => {
                                         >
                                             {pago ? (
                                                 (pago.estado === 'pendiente' || pago.estado === 'rechazado' || pago.estado === 'proyectado')
-                                                    ? formatearMonto(deudasCalculadas.celdas[pago.id] ?? (pago.monto - (pago.monto_pagado || 0)))
+                                                    ? (deudasCalculadas.celdas[pago.id] === 0
+                                                        ? formatearMonto(pago.monto)  // Cubierto por saldo: mostrar monto completo en azul
+                                                        : formatearMonto(deudasCalculadas.celdas[pago.id] ?? (pago.monto - (pago.monto_pagado || 0))))
                                                     : formatearMonto(pago.monto)
                                             ) : ""}
                                         </td>

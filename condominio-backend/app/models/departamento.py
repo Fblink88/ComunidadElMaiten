@@ -76,6 +76,7 @@ class DepartamentoResponse(DepartamentoBase):
     Incluye el ID y la lista de usuarios asociados.
     """
     id: str = Field(..., description="ID único del departamento")
+    saldo_a_favor: int = Field(default=0, description="Saldo a favor acumulado en CLP")
     usuarios_ids: List[str] = Field(
         default=[],
         description="Lista de IDs de usuarios asociados (máximo 5)"

@@ -18,7 +18,8 @@ import {
   deleteDepartamento,
   getUsuariosByDepartamento,
   aplicarAumentoMasivo,
-  ajustarSaldoBilletera
+  ajustarSaldoBilletera,
+  getHistorialBilletera
 } from '@/shared/api'
 import { getAllTransacciones, getAllPagos } from '@/shared/api/pagos.api'
 
@@ -89,6 +90,7 @@ export const DepartamentosPage = () => {
   const [motivoAjuste, setMotivoAjuste] = useState<string>('')
   const [ajustando, setAjustando] = useState(false)
   const [deudaEfectiva, setDeudaEfectiva] = useState<number>(0)
+  const [saldoNeto, setSaldoNeto] = useState<number>(0)
 
   // Estado para el modal de Aumento Masivo
   const [showAumentoModal, setShowAumentoModal] = useState(false)
@@ -216,14 +218,15 @@ export const DepartamentosPage = () => {
       const usuariosData = await getUsuariosByDepartamento(depto.id)
       setUsuarios(usuariosData)
 
-      // Cargar historial (igual que en /admin/pagos - todas transacciones, filtradas por depto)
+      // Cargar historial unificado: transacciones + billetera_movimientos
       setLoadingBilletera(true)
-      const [todasTransacciones, todosPagos] = await Promise.all([
+      const [todasTransacciones, todosPagos, billMovs] = await Promise.all([
         getAllTransacciones(),
-        getAllPagos()
+        getAllPagos(),
+        getHistorialBilletera(depto.id)
       ])
 
-      // Filtrar solo los del departamento actual
+      // Transacciones del depto (abonos históricos, pagos online, etc.)
       const transDepto = todasTransacciones
         .filter(t => t.departamento_id === depto.id)
         .map(t => ({
@@ -231,19 +234,42 @@ export const DepartamentosPage = () => {
           fecha: t.fecha,
           monto_cambio: t.monto_total,
           motivo: t.notas && t.notas !== '-' ? t.notas : 'Abono / Transacción',
-          saldo_resultante: null
+          saldo_resultante: null as any,
+          _source: 'transaccion'
         }))
-        .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
-      setBilleteraMovimientos(transDepto)
 
-      const pagosDepto = todosPagos.filter(p => p.departamentoId === depto.id)
+      // Movimientos de billetera (ajustes manuales)
+      const billDepto = billMovs.map(b => ({
+        id: b.id,
+        fecha: b.fecha,
+        monto_cambio: b.monto_cambio,
+        motivo: b.motivo || 'Ajuste manual',
+        saldo_resultante: b.saldo_resultante,
+        _source: 'billetera'
+      }))
+
+      // Unificar y deduplicar (futuro dual-write: mismo monto+motivo en +-2s = duplicado)
+      const todos = [...transDepto]
+      for (const bm of billDepto) {
+        const isDuplicate = transDepto.some(t =>
+          t.monto_cambio === bm.monto_cambio &&
+          t.motivo === bm.motivo &&
+          Math.abs(new Date(t.fecha).getTime() - new Date(bm.fecha).getTime()) < 2000
+        )
+        if (!isDuplicate) todos.push(bm)
+      }
+      todos.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
+      setBilleteraMovimientos(todos)
+
+      // Cascada igual que MatrizDeudas: usar departamento_id (snake_case del API)
+      const pagosDepto = todosPagos.filter((p: any) => p.departamento_id === depto.id)
       let saldoRestante = depto.saldo_a_favor || 0
       const pendientes = pagosDepto
-        .filter(p => p.estado === 'pendiente' || p.estado === 'rechazado')
-        .sort((a, b) => (a.periodo || '').localeCompare(b.periodo || ''))
+        .filter((p: any) => p.estado === 'pendiente' || p.estado === 'rechazado')
+        .sort((a: any, b: any) => (a.periodo || '').localeCompare(b.periodo || ''))
       let deudaEfectivaCalc = 0
       for (const p of pendientes) {
-        const deudaBruta = p.monto - (p.monto_pagado || 0)
+        const deudaBruta = (p as any).monto - ((p as any).monto_pagado || 0)
         if (saldoRestante >= deudaBruta) {
           saldoRestante -= deudaBruta
         } else {
@@ -252,6 +278,7 @@ export const DepartamentosPage = () => {
         }
       }
       setDeudaEfectiva(deudaEfectivaCalc)
+      setSaldoNeto(saldoRestante)
 
       setLoadingBilletera(false)
     } catch (error) {
@@ -272,8 +299,11 @@ export const DepartamentosPage = () => {
       setAjustando(true)
       await ajustarSaldoBilletera(selectedDepto.id, Number(montoAjuste), motivoAjuste)
 
-      // Recargar historial igual que en /admin/pagos
-      const todasTransacciones2 = await getAllTransacciones()
+      // Recargar historial unificado
+      const [todasTransacciones2, billMovs2] = await Promise.all([
+        getAllTransacciones(),
+        getHistorialBilletera(selectedDepto.id)
+      ])
       const transDepto2 = todasTransacciones2
         .filter(t => t.departamento_id === selectedDepto.id)
         .map(t => ({
@@ -281,10 +311,28 @@ export const DepartamentosPage = () => {
           fecha: t.fecha,
           monto_cambio: t.monto_total,
           motivo: t.notas && t.notas !== '-' ? t.notas : 'Abono / Transacción',
-          saldo_resultante: null
+          saldo_resultante: null as any,
+          _source: 'transaccion'
         }))
-        .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
-      setBilleteraMovimientos(transDepto2)
+      const billDepto2 = billMovs2.map(b => ({
+        id: b.id,
+        fecha: b.fecha,
+        monto_cambio: b.monto_cambio,
+        motivo: b.motivo || 'Ajuste manual',
+        saldo_resultante: b.saldo_resultante,
+        _source: 'billetera'
+      }))
+      const todos2 = [...transDepto2]
+      for (const bm of billDepto2) {
+        const isDuplicate = transDepto2.some(t =>
+          t.monto_cambio === bm.monto_cambio &&
+          t.motivo === bm.motivo &&
+          Math.abs(new Date(t.fecha).getTime() - new Date(bm.fecha).getTime()) < 2000
+        )
+        if (!isDuplicate) todos2.push(bm)
+      }
+      todos2.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
+      setBilleteraMovimientos(todos2)
 
       // FETCH TRUE STATE FROM DB
       const deptoActualizado = await getDepartamento(selectedDepto.id)
@@ -295,16 +343,16 @@ export const DepartamentosPage = () => {
       ))
       setSelectedDepto(deptoActualizado)
 
-      // Recalcular deuda con cascada (igual que MatrizDeudas)
+      // Recalcular deuda con cascada (usar departamento_id snake_case del API)
       const todosPagos3 = await getAllPagos()
-      const pagosDepto3 = todosPagos3.filter(p => p.departamentoId === selectedDepto.id)
+      const pagosDepto3 = todosPagos3.filter((p: any) => p.departamento_id === selectedDepto.id)
       let saldoRestante3 = (deptoActualizado.saldo_a_favor || 0)
       const pendientes3 = pagosDepto3
-        .filter(p => p.estado === 'pendiente' || p.estado === 'rechazado')
-        .sort((a, b) => (a.periodo || '').localeCompare(b.periodo || ''))
+        .filter((p: any) => p.estado === 'pendiente' || p.estado === 'rechazado')
+        .sort((a: any, b: any) => (a.periodo || '').localeCompare(b.periodo || ''))
       let deudaEfectivaCalc3 = 0
       for (const p of pendientes3) {
-        const db3 = p.monto - (p.monto_pagado || 0)
+        const db3 = (p as any).monto - ((p as any).monto_pagado || 0)
         if (saldoRestante3 >= db3) {
           saldoRestante3 -= db3
         } else {
@@ -313,6 +361,7 @@ export const DepartamentosPage = () => {
         }
       }
       setDeudaEfectiva(deudaEfectivaCalc3)
+      setSaldoNeto(saldoRestante3)
 
       alert('Ajuste realizado exitosamente')
       setMontoAjuste('')
@@ -685,15 +734,15 @@ export const DepartamentosPage = () => {
 
         {activeTab === 'billetera' && (
           <div className="space-y-6">
-            <div className={`p-4 rounded-lg flex items-center justify-between border ${deudaEfectiva <= 0 ? 'bg-blue-50 border-blue-100' : 'bg-red-50 border-red-100'}`}>
+            <div className={`p-4 rounded-lg flex items-center justify-between border ${deudaEfectiva > 0 ? 'bg-red-50 border-red-100' : saldoNeto > 0 ? 'bg-blue-50 border-blue-100' : 'bg-green-50 border-green-100'}`}>
               <div>
-                <p className={`text-sm font-medium ${deudaEfectiva <= 0 ? 'text-blue-800' : 'text-red-800'}`}>
-                  {deudaEfectiva <= 0 ? 'Saldo a Favor' : 'Deuda Efectiva'}
+                <p className={`text-sm font-medium ${deudaEfectiva > 0 ? 'text-red-800' : saldoNeto > 0 ? 'text-blue-800' : 'text-green-800'}`}>
+                  {deudaEfectiva > 0 ? 'Deuda Pendiente' : saldoNeto > 0 ? 'Saldo a Favor' : 'Al Día ✓'}
                 </p>
                 <div className="flex items-center gap-2 mt-1">
-                  <Wallet className={`w-5 h-5 ${deudaEfectiva <= 0 ? 'text-blue-600' : 'text-red-600'}`} />
-                  <span className={`text-2xl font-bold ${deudaEfectiva <= 0 ? 'text-blue-900' : 'text-red-600'}`}>
-                    ${deudaEfectiva <= 0 ? (selectedDepto?.saldo_a_favor || 0).toLocaleString('es-CL') : deudaEfectiva.toLocaleString('es-CL')}
+                  <Wallet className={`w-5 h-5 ${deudaEfectiva > 0 ? 'text-red-600' : saldoNeto > 0 ? 'text-blue-600' : 'text-green-600'}`} />
+                  <span className={`text-2xl font-bold ${deudaEfectiva > 0 ? 'text-red-600' : saldoNeto > 0 ? 'text-blue-900' : 'text-green-700'}`}>
+                    ${deudaEfectiva > 0 ? deudaEfectiva.toLocaleString('es-CL') : saldoNeto > 0 ? saldoNeto.toLocaleString('es-CL') : '0'}
                   </span>
                 </div>
               </div>
