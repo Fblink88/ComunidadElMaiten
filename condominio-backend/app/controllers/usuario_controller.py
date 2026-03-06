@@ -36,7 +36,7 @@ async def listar_usuarios(
     Returns:
         Lista de usuarios
     """
-    return usuario_service.obtener_todos()
+    return await usuario_service.obtener_todos()
 
 
 @router.get("/departamento/{departamento_id}", response_model=List[UsuarioResponse])
@@ -66,7 +66,7 @@ async def listar_usuarios_por_departamento(
             detail="No tienes permisos para ver usuarios de otros departamentos"
         )
     
-    return usuario_service.obtener_por_departamento(departamento_id)
+    return await usuario_service.obtener_por_departamento(departamento_id)
 
 
 @router.get("/{usuario_id}", response_model=UsuarioResponse)
@@ -95,7 +95,7 @@ async def obtener_usuario(
             detail="No tienes permisos para ver este usuario"
         )
     
-    usuario = usuario_service.obtener_por_id(usuario_id)
+    usuario = await usuario_service.obtener_por_id(usuario_id)
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     
@@ -122,7 +122,7 @@ async def actualizar_usuario(
         Usuario actualizado
     """
     try:
-        usuario = usuario_service.actualizar(usuario_id, data, current_user)
+        usuario = await usuario_service.actualizar(usuario_id, data, current_user)
         if not usuario:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
         return usuario
@@ -144,7 +144,7 @@ async def eliminar_usuario(
         usuario_id: ID del usuario
     """
     try:
-        if not usuario_service.eliminar(usuario_id, current_user):
+        if not await usuario_service.eliminar(usuario_id, current_user):
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
@@ -173,7 +173,7 @@ async def cambiar_rol_usuario(
         Usuario actualizado
     """
     try:
-        usuario = usuario_service.cambiar_rol(
+        usuario = await usuario_service.cambiar_rol(
             usuario_id,
             rol,
             es_admin,

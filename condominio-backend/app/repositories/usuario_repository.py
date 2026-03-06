@@ -21,7 +21,7 @@ class UsuarioRepository(BaseRepository):
         """Inicializa el repositorio con la colección 'usuarios'."""
         super().__init__('usuarios')
     
-    def create_with_uid(self, uid: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    async def create_with_uid(self, uid: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Crea un usuario usando el UID de Firebase Auth como ID.
         
@@ -32,9 +32,9 @@ class UsuarioRepository(BaseRepository):
         Returns:
             Diccionario con los datos creados incluyendo el ID
         """
-        return self.create(data, doc_id=uid)
+        return await self.create(data, doc_id=uid)
     
-    def get_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+    async def get_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """
         Busca un usuario por su email.
         
@@ -44,10 +44,10 @@ class UsuarioRepository(BaseRepository):
         Returns:
             Diccionario con los datos del usuario o None
         """
-        results = self.find_by_field('email', email, limit=1)
+        results = await self.find_by_field('email', email, limit=1)
         return results[0] if results else None
     
-    def get_by_departamento(self, departamento_id: str) -> List[Dict[str, Any]]:
+    async def get_by_departamento(self, departamento_id: str) -> List[Dict[str, Any]]:
         """
         Obtiene todos los usuarios de un departamento.
         
@@ -57,27 +57,27 @@ class UsuarioRepository(BaseRepository):
         Returns:
             Lista de usuarios asociados al departamento
         """
-        return self.find_by_field('departamento_id', departamento_id)
+        return await self.find_by_field('departamento_id', departamento_id)
     
-    def get_admins(self) -> List[Dict[str, Any]]:
+    async def get_admins(self) -> List[Dict[str, Any]]:
         """
         Obtiene todos los usuarios administradores.
         
         Returns:
             Lista de usuarios con es_admin=True
         """
-        return self.find_by_field('es_admin', True)
+        return await self.find_by_field('es_admin', True)
     
-    def get_propietarios(self) -> List[Dict[str, Any]]:
+    async def get_propietarios(self) -> List[Dict[str, Any]]:
         """
         Obtiene todos los propietarios.
         
         Returns:
             Lista de usuarios con rol='propietario'
         """
-        return self.find_by_field('rol', 'propietario')
+        return await self.find_by_field('rol', 'propietario')
     
-    def es_propietario_de(self, usuario_id: str, departamento_id: str) -> bool:
+    async def es_propietario_de(self, usuario_id: str, departamento_id: str) -> bool:
         """
         Verifica si un usuario es propietario de un departamento.
         
@@ -88,7 +88,7 @@ class UsuarioRepository(BaseRepository):
         Returns:
             True si el usuario es propietario del departamento
         """
-        usuario = self.get_by_id(usuario_id)
+        usuario = await self.get_by_id(usuario_id)
         if not usuario:
             return False
         
@@ -97,7 +97,7 @@ class UsuarioRepository(BaseRepository):
             usuario.get('rol') == 'propietario'
         )
     
-    def actualizar_rol(self, usuario_id: str, rol: str, es_admin: bool = False) -> bool:
+    async def actualizar_rol(self, usuario_id: str, rol: str, es_admin: bool = False) -> bool:
         """
         Actualiza el rol de un usuario.
         
@@ -109,7 +109,7 @@ class UsuarioRepository(BaseRepository):
         Returns:
             True si se actualizó correctamente
         """
-        result = self.update(usuario_id, {
+        result = await self.update(usuario_id, {
             'rol': rol,
             'es_admin': es_admin
         })

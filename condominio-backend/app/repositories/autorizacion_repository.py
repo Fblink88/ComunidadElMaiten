@@ -7,6 +7,7 @@ relacionadas con las autorizaciones de pago para arrendatarios.
 
 from typing import List, Dict, Any, Optional
 from datetime import datetime
+from starlette.concurrency import run_in_threadpool
 from .base_repository import BaseRepository
 
 
@@ -22,7 +23,7 @@ class AutorizacionRepository(BaseRepository):
         """Inicializa el repositorio con la colección 'autorizaciones_pago'"""
         super().__init__('autorizaciones_pago')
 
-    def crear_solicitud(
+    async def crear_solicitud(
         self,
         departamento_id: str,
         propietario_id: str,
@@ -60,9 +61,9 @@ class AutorizacionRepository(BaseRepository):
             'fecha_revocacion': None
         }
 
-        return self.create(data)
+        return await self.create(data)
 
-    def crear_autorizacion_directa(
+    async def crear_autorizacion_directa(
         self,
         departamento_id: str,
         propietario_id: str,
@@ -100,9 +101,9 @@ class AutorizacionRepository(BaseRepository):
             'fecha_revocacion': None
         }
 
-        return self.create(data)
+        return await self.create(data)
 
-    def aprobar(
+    async def aprobar(
         self,
         autorizacion_id: str,
         nota_respuesta: str
@@ -117,13 +118,13 @@ class AutorizacionRepository(BaseRepository):
         Returns:
             Autorización actualizada o None si no existe
         """
-        return self.update(autorizacion_id, {
+        return await self.update(autorizacion_id, {
             'estado': 'aprobada',
             'nota_respuesta': nota_respuesta,
             'fecha_respuesta': datetime.utcnow()
         })
 
-    def rechazar(
+    async def rechazar(
         self,
         autorizacion_id: str,
         motivo: str
@@ -138,13 +139,13 @@ class AutorizacionRepository(BaseRepository):
         Returns:
             Autorización actualizada o None si no existe
         """
-        return self.update(autorizacion_id, {
+        return await self.update(autorizacion_id, {
             'estado': 'rechazada',
             'nota_respuesta': motivo,
             'fecha_respuesta': datetime.utcnow()
         })
 
-    def revocar(
+    async def revocar(
         self,
         autorizacion_id: str,
         motivo: str
@@ -159,13 +160,13 @@ class AutorizacionRepository(BaseRepository):
         Returns:
             Autorización actualizada o None si no existe
         """
-        return self.update(autorizacion_id, {
+        return await self.update(autorizacion_id, {
             'estado': 'revocada',
             'nota_respuesta': motivo,
             'fecha_revocacion': datetime.utcnow()
         })
 
-    def obtener_por_departamento(
+    async def obtener_por_departamento(
         self,
         departamento_id: str,
         solo_activas: bool = False
@@ -185,10 +186,12 @@ class AutorizacionRepository(BaseRepository):
         if solo_activas:
             query = query.where('estado', '==', 'aprobada')
 
-        docs = query.stream()
+        def _stream():
+            return list(query.stream())
+        docs = await run_in_threadpool(_stream)
         return [self._doc_to_dict(doc) for doc in docs if doc.exists]
 
-    def obtener_solicitudes_pendientes(
+    async def obtener_solicitudes_pendientes(
         self,
         propietario_id: str
     ) -> List[Dict[str, Any]]:
@@ -211,7 +214,7 @@ class AutorizacionRepository(BaseRepository):
 
         return [self._doc_to_dict(doc) for doc in docs if doc.exists]
 
-    def verificar_autorizacion_permanente(
+    async def verificar_autorizacion_permanente(
         self,
         arrendatario_id: str,
         departamento_id: str
@@ -239,7 +242,7 @@ class AutorizacionRepository(BaseRepository):
         results = [self._doc_to_dict(doc) for doc in docs if doc.exists]
         return results[0] if results else None
 
-    def verificar_autorizacion_ocasional(
+    async def verificar_autorizacion_ocasional(
         self,
         arrendatario_id: str,
         departamento_id: str,
@@ -270,7 +273,7 @@ class AutorizacionRepository(BaseRepository):
         results = [self._doc_to_dict(doc) for doc in docs if doc.exists]
         return results[0] if results else None
 
-    def tiene_solicitud_pendiente(
+    async def tiene_solicitud_pendiente(
         self,
         arrendatario_id: str,
         departamento_id: str
@@ -296,7 +299,7 @@ class AutorizacionRepository(BaseRepository):
 
         return len(list(docs)) > 0
 
-    def tiene_autorizacion_activa(
+    async def tiene_autorizacion_activa(
         self,
         arrendatario_id: str,
         departamento_id: str,
@@ -325,7 +328,7 @@ class AutorizacionRepository(BaseRepository):
 
         return len(list(docs)) > 0
 
-    def obtener_autorizaciones_arrendatario(
+    async def obtener_autorizaciones_arrendatario(
         self,
         arrendatario_id: str
     ) -> List[Dict[str, Any]]:

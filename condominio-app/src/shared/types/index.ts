@@ -81,7 +81,9 @@ export interface Pago {
   /** Periodo del pago en formato "YYYY-MM" (ej: "2025-01") */
   periodo: string
   /** Estado actual del pago */
-  estado: "pendiente" | "pagado" | "verificando"
+  estado: "pendiente" | "pagado" | "verificando" | "rechazado"
+  /** Monto ya pagado parcialmente (billetera virtual) */
+  monto_pagado?: number
   /** Método utilizado para el pago */
   metodo: "khipu" | "transferencia_manual"
   /** ID de transacción de Khipu (solo si se pagó con Khipu) */

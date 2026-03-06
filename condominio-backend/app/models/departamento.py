@@ -83,9 +83,10 @@ class DepartamentoResponse(DepartamentoBase):
     created_at: Optional[datetime] = Field(None, description="Fecha de creación")
     updated_at: Optional[datetime] = Field(None, description="Fecha de última actualización")
 
-    class Config:
-        """Permite crear el modelo desde objetos de Firestore"""
-        from_attributes = True
+    model_config = {
+        "from_attributes": True,
+        "extra": "ignore"
+    }
 
 class AumentoMasivoRequest(BaseModel):
     """

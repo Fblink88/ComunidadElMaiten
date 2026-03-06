@@ -7,6 +7,7 @@ relacionadas con los pagos de gastos comunes.
 
 from typing import Optional, List, Dict, Any
 from datetime import datetime
+from starlette.concurrency import run_in_threadpool
 from .base_repository import BaseRepository
 
 
@@ -22,7 +23,7 @@ class PagoRepository(BaseRepository):
         """Inicializa el repositorio con la colección 'pagos'."""
         super().__init__('pagos')
     
-    def get_by_departamento(self, departamento_id: str) -> List[Dict[str, Any]]:
+    async def get_by_departamento(self, departamento_id: str) -> List[Dict[str, Any]]:
         """
         Obtiene todos los pagos de un departamento.
         
@@ -32,9 +33,9 @@ class PagoRepository(BaseRepository):
         Returns:
             Lista de pagos del departamento ordenados por periodo
         """
-        return self.find_by_field('departamento_id', departamento_id)
+        return await self.find_by_field('departamento_id', departamento_id)
     
-    def get_by_periodo(self, periodo: str) -> List[Dict[str, Any]]:
+    async def get_by_periodo(self, periodo: str) -> List[Dict[str, Any]]:
         """
         Obtiene todos los pagos de un periodo específico.
         
@@ -44,9 +45,9 @@ class PagoRepository(BaseRepository):
         Returns:
             Lista de pagos del periodo
         """
-        return self.find_by_field('periodo', periodo)
+        return await self.find_by_field('periodo', periodo)
     
-    def get_by_departamento_y_periodo(
+    async def get_by_departamento_y_periodo(
         self, 
         departamento_id: str, 
         periodo: str
@@ -61,29 +62,32 @@ class PagoRepository(BaseRepository):
         Returns:
             Diccionario con el pago o None si no existe
         """
-        docs = (
-            self.collection
-            .where('departamento_id', '==', departamento_id)
-            .where('periodo', '==', periodo)
-            .limit(1)
-            .stream()
-        )
+        def _stream():
+            return list(
+                self.collection
+                .where('departamento_id', '==', departamento_id)
+                .where('periodo', '==', periodo)
+                .limit(1)
+                .stream()
+            )
+            
+        docs = await run_in_threadpool(_stream)
         
         for doc in docs:
             return self._doc_to_dict(doc)
         
         return None
     
-    def get_pendientes(self) -> List[Dict[str, Any]]:
+    async def get_pendientes(self) -> List[Dict[str, Any]]:
         """
         Obtiene todos los pagos pendientes.
         
         Returns:
             Lista de pagos con estado='pendiente'
         """
-        return self.find_by_field('estado', 'pendiente')
+        return await self.find_by_field('estado', 'pendiente')
     
-    def get_pendientes_by_departamento(self, departamento_id: str) -> List[Dict[str, Any]]:
+    async def get_pendientes_by_departamento(self, departamento_id: str) -> List[Dict[str, Any]]:
         """
         Obtiene los pagos pendientes de un departamento.
         
@@ -93,16 +97,19 @@ class PagoRepository(BaseRepository):
         Returns:
             Lista de pagos pendientes del departamento
         """
-        docs = (
-            self.collection
-            .where('departamento_id', '==', departamento_id)
-            .where('estado', '==', 'pendiente')
-            .stream()
-        )
+        def _stream():
+            return list(
+                self.collection
+                .where('departamento_id', '==', departamento_id)
+                .where('estado', '==', 'pendiente')
+                .stream()
+            )
+            
+        docs = await run_in_threadpool(_stream)
         
         return [self._doc_to_dict(doc) for doc in docs if doc.exists]
     
-    def marcar_como_pagado(
+    async def marcar_como_pagado(
         self, 
         pago_id: str, 
         flow_payment_id: Optional[str] = None,
@@ -130,9 +137,9 @@ class PagoRepository(BaseRepository):
         if verificado_por:
             data['verificado_por'] = verificado_por
         
-        return self.update(pago_id, data)
+        return await self.update(pago_id, data)
     
-    def actualizar_estado(self, pago_id: str, estado: str) -> Optional[Dict[str, Any]]:
+    async def actualizar_estado(self, pago_id: str, estado: str) -> Optional[Dict[str, Any]]:
         """
         Actualiza el estado de un pago.
         
@@ -143,4 +150,4 @@ class PagoRepository(BaseRepository):
         Returns:
             Diccionario con el pago actualizado o None
         """
-        return self.update(pago_id, {'estado': estado})
+        return await self.update(pago_id, {'estado': estado})

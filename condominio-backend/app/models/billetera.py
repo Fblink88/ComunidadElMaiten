@@ -27,8 +27,10 @@ class BilleteraMovimientoResponse(BilleteraMovimientoBase):
     id: str = Field(..., description="ID único del movimiento")
     fecha: datetime = Field(..., description="Fecha del movimiento")
 
-    class Config:
-        from_attributes = True
+    model_config = {
+        "from_attributes": True,
+        "extra": "ignore"
+    }
 
 
 class AjusteBilleteraRequest(BaseModel):

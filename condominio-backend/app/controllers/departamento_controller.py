@@ -11,11 +11,11 @@ from app.middleware import get_current_user, get_admin_user
 from app.services import DepartamentoService
 from app.models import (
     DepartamentoCreate,
-    DepartamentoCreate,
     DepartamentoUpdate,
     DepartamentoResponse,
     AumentoMasivoRequest
 )
+from app.models.billetera import AjusteBilleteraRequest, BilleteraMovimientoResponse
 
 router = APIRouter(
     prefix="/departamentos",
@@ -119,7 +119,7 @@ async def actualizar_departamento(
         Departamento actualizado
     """
     try:
-        depto = departamento_service.actualizar(departamento_id, data)
+        depto = await departamento_service.actualizar(departamento_id, data)
         if not depto:
             raise HTTPException(status_code=404, detail="Departamento no encontrado")
         return depto
@@ -142,7 +142,7 @@ async def eliminar_departamento(
         departamento_id: ID del departamento
     """
     try:
-        if not departamento_service.eliminar(departamento_id):
+        if not await departamento_service.eliminar(departamento_id):
             raise HTTPException(status_code=404, detail="Departamento no encontrado")
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -169,7 +169,7 @@ async def agregar_usuario_a_departamento(
         Mensaje de confirmación
     """
     try:
-        success = departamento_service.agregar_usuario(
+        success = await departamento_service.agregar_usuario(
             departamento_id,
             usuario_id,
             current_user
@@ -203,7 +203,7 @@ async def remover_usuario_de_departamento(
         Mensaje de confirmación
     """
     try:
-        success = departamento_service.remover_usuario(
+        success = await departamento_service.remover_usuario(
             departamento_id,
             usuario_id,
             current_user
@@ -215,6 +215,48 @@ async def remover_usuario_de_departamento(
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/{departamento_id}/billetera/ajustar", response_model=BilleteraMovimientoResponse)
+async def ajustar_billetera(
+    departamento_id: str,
+    data: AjusteBilleteraRequest,
+    current_user: Dict[str, Any] = Depends(get_admin_user)
+):
+    """
+    Ajusta manualmente el saldo de la billetera virtual de un departamento.
+    Solo administradores.
+    """
+    try:
+        return await departamento_service.ajustar_saldo(departamento_id, data, current_user)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/{departamento_id}/billetera/movimientos", response_model=List[BilleteraMovimientoResponse])
+async def historial_billetera(
+    departamento_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """
+    Obtiene el historial de movimientos de billetera de un departamento.
+    """
+    return await departamento_service.obtener_historial_billetera(departamento_id, current_user)
+
+
+@router.get("/billetera/movimientos/todos", response_model=List[BilleteraMovimientoResponse])
+async def historial_billetera_todos(
+    current_user: Dict[str, Any] = Depends(get_admin_user)
+):
+    """
+    Obtiene el historial de movimientos de billetera de todos los departamentos.
+    Solo administradores.
+    """
+    from app.repositories.billetera_repository import BilleteraRepository
+    b_repo = BilleteraRepository()
+    return await b_repo.obtener_todos()
 
 @router.post("/aumento-masivo", response_model=Dict[str, Any])
 async def aplicar_aumento_masivo(

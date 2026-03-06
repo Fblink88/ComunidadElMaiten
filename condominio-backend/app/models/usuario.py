@@ -21,10 +21,11 @@ class RolUsuario(str, Enum):
     Roles disponibles en el sistema.
     
     Usar Enum asegura que solo se puedan asignar valores válidos.
+    Los valores están en minúsculas para coincidir con Firestore.
     """
-    ADMIN = "ADMIN"
-    PROPIETARIO = "PROPIETARIO"
-    ARRENDATARIO = "ARRENDATARIO"
+    ADMIN = "admin"
+    PROPIETARIO = "propietario"
+    ARRENDATARIO = "arrendatario"
 
 
 class UsuarioBase(BaseModel):
@@ -98,10 +99,11 @@ class UsuarioResponse(UsuarioBase):
         description="Fecha de creación"
     )
     
-    class Config:
-        """Permite crear el modelo desde objetos de Firestore"""
-        from_attributes = True
-        populate_by_name = True
+    model_config = {
+        "from_attributes": True,
+        "populate_by_name": True,
+        "extra": "ignore"
+    }
 
 
 class UsuarioInDB(UsuarioResponse):

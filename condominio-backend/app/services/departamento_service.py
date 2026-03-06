@@ -285,20 +285,45 @@ class DepartamentoService:
             raise PermissionError("Solo admin puede ajustar saldo manualmente")
         
         from app.repositories.billetera_repository import BilleteraRepository
+        from app.repositories.transaccion_repository import TransaccionRepository
         b_repo = BilleteraRepository()
+        t_repo = TransaccionRepository()
         
-        movimiento = await b_repo.create_movimiento(
-            departamento_id,
-            request.tipo,
-            request.monto,
-            request.motivo,
-            usuario_solicitante['id']
-        )
+        # Get current balance to calculate resulting balance
+        depto = await self.depto_repo.get_by_id(departamento_id)
+        saldo_actual = depto.get('saldo_a_favor', 0) if depto else 0
+        saldo_resultante = saldo_actual + request.monto
         
-        monto_ajuste = request.monto if request.tipo == 'ingreso' else -request.monto
-        await self.depto_repo.actualizar_saldo(departamento_id, monto_ajuste)
+        from datetime import datetime
+        ahora = datetime.utcnow()
+        
+        # 1. Guardar en billetera_movimientos (para historial de la billetera)
+        movimiento_data = {
+            'departamento_id': departamento_id,
+            'monto_cambio': request.monto,
+            'saldo_resultante': saldo_resultante,
+            'motivo': request.motivo,
+            'usuario_admin_id': usuario_solicitante['id'],
+            'fecha': ahora
+        }
+        movimiento = await b_repo.create(movimiento_data)
+        
+        # 2. Guardar en transacciones (para que aparezca en /admin/pagos historial de abonos)
+        transaccion_data = {
+            'departamento_id': departamento_id,
+            'monto_total': request.monto,
+            'metodo': 'ajuste_manual',
+            'notas': request.motivo,
+            'fecha': ahora,
+            'usuario_admin_id': usuario_solicitante['id'],
+        }
+        await t_repo.crear_transaccion(transaccion_data)
+        
+        # 3. Actualizar saldo_a_favor en el departamento
+        await self.depto_repo.actualizar_saldo(departamento_id, request.monto)
         
         return movimiento
+
         
     async def obtener_historial_billetera(self, departamento_id: str, usuario_solicitante: Dict[str, Any]) -> List[Dict[str, Any]]:
         from app.repositories.billetera_repository import BilleteraRepository

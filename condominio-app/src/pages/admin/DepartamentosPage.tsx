@@ -18,11 +18,10 @@ import {
   deleteDepartamento,
   getUsuariosByDepartamento,
   aplicarAumentoMasivo,
-  ajustarSaldoBilletera,
-  getPagosByDepartamento,
-  getTransaccionesByDepartamento
+  ajustarSaldoBilletera
 } from '@/shared/api'
-import type { Transaccion } from '@/shared/types'
+import { getAllTransacciones, getAllPagos } from '@/shared/api/pagos.api'
+
 import {
   Building2,
   Plus,
@@ -83,7 +82,8 @@ export const DepartamentosPage = () => {
 
   // Estado para detalles (Tabs: Usuarios / Billetera)
   const [activeTab, setActiveTab] = useState<'usuarios' | 'billetera'>('usuarios')
-  const [movimientos, setMovimientos] = useState<Transaccion[]>([])
+  // Lista unificada de movimientos (movimientos billetera + transacciones históricas)
+  const [billeteraMovimientos, setBilleteraMovimientos] = useState<any[]>([])
   const [loadingBilletera, setLoadingBilletera] = useState(false)
   const [montoAjuste, setMontoAjuste] = useState<number | ''>('')
   const [motivoAjuste, setMotivoAjuste] = useState<string>('')
@@ -216,20 +216,42 @@ export const DepartamentosPage = () => {
       const usuariosData = await getUsuariosByDepartamento(depto.id)
       setUsuarios(usuariosData)
 
-      // Cargar Billetera y Deudas
+      // Cargar historial (igual que en /admin/pagos - todas transacciones, filtradas por depto)
       setLoadingBilletera(true)
-      const [movs, pagosDepto] = await Promise.all([
-        getTransaccionesByDepartamento(depto.id),
-        getPagosByDepartamento(depto.id)
+      const [todasTransacciones, todosPagos] = await Promise.all([
+        getAllTransacciones(),
+        getAllPagos()
       ])
-      // Ordenar ms recientes primero
-      setMovimientos(movs.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()))
 
-      // Calcular deuda pendiente real
-      const pendientes = pagosDepto.filter(p => p.estado === 'pendiente' || p.estado === 'rechazado')
-      const deudaBruta = pendientes.reduce((sum, p) => sum + (p.monto - (p.monto_pagado || 0)), 0)
-      const deudaNeta = Math.max(0, deudaBruta - (depto.saldo_a_favor || 0))
-      setDeudaEfectiva(deudaNeta)
+      // Filtrar solo los del departamento actual
+      const transDepto = todasTransacciones
+        .filter(t => t.departamento_id === depto.id)
+        .map(t => ({
+          id: t.id,
+          fecha: t.fecha,
+          monto_cambio: t.monto_total,
+          motivo: t.notas && t.notas !== '-' ? t.notas : 'Abono / Transacción',
+          saldo_resultante: null
+        }))
+        .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
+      setBilleteraMovimientos(transDepto)
+
+      const pagosDepto = todosPagos.filter(p => p.departamentoId === depto.id)
+      let saldoRestante = depto.saldo_a_favor || 0
+      const pendientes = pagosDepto
+        .filter(p => p.estado === 'pendiente' || p.estado === 'rechazado')
+        .sort((a, b) => (a.periodo || '').localeCompare(b.periodo || ''))
+      let deudaEfectivaCalc = 0
+      for (const p of pendientes) {
+        const deudaBruta = p.monto - (p.monto_pagado || 0)
+        if (saldoRestante >= deudaBruta) {
+          saldoRestante -= deudaBruta
+        } else {
+          deudaEfectivaCalc += deudaBruta - saldoRestante
+          saldoRestante = 0
+        }
+      }
+      setDeudaEfectiva(deudaEfectivaCalc)
 
       setLoadingBilletera(false)
     } catch (error) {
@@ -250,15 +272,22 @@ export const DepartamentosPage = () => {
       setAjustando(true)
       await ajustarSaldoBilletera(selectedDepto.id, Number(montoAjuste), motivoAjuste)
 
-      // Recargar Billetera usando endpoint de Transacciones
-      const movs = await getTransaccionesByDepartamento(selectedDepto.id)
-      setMovimientos(movs.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()))
+      // Recargar historial igual que en /admin/pagos
+      const todasTransacciones2 = await getAllTransacciones()
+      const transDepto2 = todasTransacciones2
+        .filter(t => t.departamento_id === selectedDepto.id)
+        .map(t => ({
+          id: t.id,
+          fecha: t.fecha,
+          monto_cambio: t.monto_total,
+          motivo: t.notas && t.notas !== '-' ? t.notas : 'Abono / Transacción',
+          saldo_resultante: null
+        }))
+        .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
+      setBilleteraMovimientos(transDepto2)
 
       // FETCH TRUE STATE FROM DB
-      const [deptoActualizado, pagosDepto] = await Promise.all([
-        getDepartamento(selectedDepto.id),
-        getPagosByDepartamento(selectedDepto.id)
-      ])
+      const deptoActualizado = await getDepartamento(selectedDepto.id)
 
       // Actualizar tabla y modal con la nueva memoria
       setDepartamentos(deps => deps.map(d =>
@@ -266,10 +295,24 @@ export const DepartamentosPage = () => {
       ))
       setSelectedDepto(deptoActualizado)
 
-      // Recalcular deuda efectiva real tras la cascada inversa o directa
-      const pendientes = pagosDepto.filter(p => p.estado === 'pendiente' || p.estado === 'rechazado')
-      const deudaBruta = pendientes.reduce((sum, p) => sum + (p.monto - (p.monto_pagado || 0)), 0)
-      setDeudaEfectiva(Math.max(0, deudaBruta - (deptoActualizado.saldo_a_favor || 0)))
+      // Recalcular deuda con cascada (igual que MatrizDeudas)
+      const todosPagos3 = await getAllPagos()
+      const pagosDepto3 = todosPagos3.filter(p => p.departamentoId === selectedDepto.id)
+      let saldoRestante3 = (deptoActualizado.saldo_a_favor || 0)
+      const pendientes3 = pagosDepto3
+        .filter(p => p.estado === 'pendiente' || p.estado === 'rechazado')
+        .sort((a, b) => (a.periodo || '').localeCompare(b.periodo || ''))
+      let deudaEfectivaCalc3 = 0
+      for (const p of pendientes3) {
+        const db3 = p.monto - (p.monto_pagado || 0)
+        if (saldoRestante3 >= db3) {
+          saldoRestante3 -= db3
+        } else {
+          deudaEfectivaCalc3 += db3 - saldoRestante3
+          saldoRestante3 = 0
+        }
+      }
+      setDeudaEfectiva(deudaEfectivaCalc3)
 
       alert('Ajuste realizado exitosamente')
       setMontoAjuste('')
@@ -699,28 +742,28 @@ export const DepartamentosPage = () => {
 
               {loadingBilletera ? (
                 <div className="py-6 flex justify-center"><Spinner size="sm" /></div>
-              ) : movimientos.length === 0 ? (
+              ) : billeteraMovimientos.length === 0 ? (
                 <div className="py-4 text-center text-gray-500 text-sm bg-gray-50 rounded-lg">
                   No hay movimientos registrados en la billetera.
                 </div>
               ) : (
                 <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
-                  {movimientos.map((mov) => (
+                  {billeteraMovimientos.map((mov) => (
                     <div key={mov.id} className="p-3 bg-white border border-gray-200 rounded-lg shadow-sm flex items-start justify-between">
                       <div>
                         <p className="text-sm text-gray-800 font-medium">
-                          {mov.notas && mov.notas !== '-' ? mov.notas : "Abono / Transacción"}
+                          {mov.motivo || 'Ajuste manual'}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
                           {new Date(mov.fecha).toLocaleString('es-CL')}
                         </p>
                       </div>
                       <div className="text-right">
-                        <span className={`text-sm font-semibold rounded px-2 py-0.5 ${mov.monto_total >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                          {mov.monto_total > 0 ? '+' : ''}{mov.monto_total.toLocaleString('es-CL')}
+                        <span className={`text-sm font-semibold rounded px-2 py-0.5 ${mov.monto_cambio >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                          {mov.monto_cambio > 0 ? '+' : ''}{mov.monto_cambio.toLocaleString('es-CL')}
                         </span>
-                        <p className="text-xs text-gray-500 mt-1 capitalize">
-                          {mov.metodo.replace('_', ' ')}
+                        <p className="text-xs text-gray-500 mt-1">
+                          Saldo: ${(mov.saldo_resultante || 0).toLocaleString('es-CL')}
                         </p>
                       </div>
                     </div>
