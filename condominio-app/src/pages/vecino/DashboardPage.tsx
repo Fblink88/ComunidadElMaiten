@@ -37,10 +37,19 @@ export const DashboardPage = () => {
   useEffect(() => {
     const cargarDatos = async () => {
       try {
-        const [pagosData, deptoData, gastosData] = await Promise.all([
-          getMisPagos(),
-          usuario?.departamento_id ? getDepartamento(usuario.departamento_id) : Promise.resolve(null),
-          getGastosMensuales(24) // Últimos 24 meses
+        // Solo llamar getMisPagos si el usuario tiene departamento (vecinos, no admin)
+        let pagosData: Pago[] = []
+        const tieneDepto = usuario?.departamento_id || usuario?.departamentoId
+        if (tieneDepto) {
+          try {
+            pagosData = await getMisPagos()
+          } catch {
+            // Si falla por alguna razón, seguimos con pagos vacíos
+          }
+        }
+        const [deptoData, gastosData] = await Promise.all([
+          tieneDepto ? getDepartamento(tieneDepto) : Promise.resolve(null),
+          getGastosMensuales(24)
         ])
         setPagos(pagosData)
         setDepartamento(deptoData)
@@ -53,7 +62,7 @@ export const DashboardPage = () => {
     }
 
     cargarDatos()
-  }, [usuario?.id, usuario?.departamento_id])
+  }, [usuario?.id, usuario?.departamento_id, usuario?.departamentoId])
 
   if (loading) {
     return (
@@ -76,7 +85,7 @@ export const DashboardPage = () => {
       // Si no hay pago O está pendiente/rechazado
       if (!pago || pago.estado === 'pendiente' || pago.estado === 'rechazado') {
         // Si existe el pago pendiente usamos su monto, si no calculamos
-        const monto = pago ? pago.monto : Math.round(gasto.valor_por_m2 * departamento.metros_cuadrados)
+        const monto = pago ? pago.monto : Math.round((gasto.valor_por_m2 || 0) * (departamento.metros_cuadrados || 0))
         deudaTotal += monto
         cantidadPendientes++
       }
@@ -89,7 +98,7 @@ export const DashboardPage = () => {
   }
 
   const ultimoPago = pagos.filter((p) => p.estado === 'pagado').sort((a, b) =>
-    new Date(b.fecha_pago || b.created_at) > new Date(a.fecha_pago || a.created_at) ? 1 : -1
+    new Date(b.fecha_pago || b.created_at || '').getTime() > new Date(a.fecha_pago || a.created_at || '').getTime() ? 1 : -1
   )[0]
 
   // Obtener período actual (YYYY-MM)
@@ -101,7 +110,7 @@ export const DashboardPage = () => {
 
   // Últimos 5 movimientos
   const ultimosMovimientos = [...pagos]
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .sort((a, b) => new Date(b.created_at || b.fecha_pago || '').getTime() - new Date(a.created_at || a.fecha_pago || '').getTime())
     .slice(0, 5)
 
   return (
@@ -163,7 +172,7 @@ export const DashboardPage = () => {
                     ${ultimoPago.monto.toLocaleString('es-CL')}
                   </p>
                   <p className="text-sm text-gray-500 mt-1">
-                    {new Date(ultimoPago.fecha_pago || ultimoPago.created_at).toLocaleDateString(
+                    {new Date(ultimoPago.fecha_pago || ultimoPago.created_at || '').toLocaleDateString(
                       'es-CL'
                     )}
                   </p>
@@ -311,7 +320,7 @@ export const DashboardPage = () => {
                           Pago {pago.periodo.split('-')[1]}/{pago.periodo.split('-')[0]}
                         </p>
                         <p className="text-sm text-gray-600">
-                          {new Date(pago.created_at).toLocaleDateString('es-CL')}
+                          {new Date(pago.created_at || pago.fecha_pago || '').toLocaleDateString('es-CL')}
                         </p>
                       </div>
                     </div>

@@ -12,8 +12,8 @@
 import { useEffect, useState } from "react"
 import type { ReactNode } from "react"
 import type { User } from "firebase/auth"
-import { 
-  onAuthStateChanged, 
+import {
+  onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
@@ -46,10 +46,10 @@ interface AuthProviderProps {
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   /** Usuario de Firebase Auth */
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null)
-  
+
   /** Datos extendidos del usuario desde Firestore */
   const [usuario, setUsuario] = useState<Usuario | null>(null)
-  
+
   /** Estado de carga inicial */
   const [loading, setLoading] = useState(true)
 
@@ -82,13 +82,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   /**
    * Inicia sesión con email y contraseña.
    */
-const login = async (email: string, password: string) => {
-  const result = await signInWithEmailAndPassword(auth, email, password)
-  
-  // TEMPORAL: Obtener token para probar backend
-  const token = await result.user.getIdToken()
-  console.log('🔑 TOKEN:', token)
-}
+  const login = async (email: string, password: string) => {
+    await signInWithEmailAndPassword(auth, email, password)
+  }
 
   /**
    * Registra un nuevo usuario.
@@ -96,13 +92,14 @@ const login = async (email: string, password: string) => {
    */
   const register = async (email: string, password: string, nombre: string) => {
     const { user } = await createUserWithEmailAndPassword(auth, email, password)
-    
+
     // Crear documento del usuario en Firestore
     const nuevoUsuario: Omit<Usuario, "id"> = {
       email,
       nombre,
       departamentoId: null,
       rol: "vecino",
+      es_admin: false,
       esAdmin: false,
       fechaRegistro: new Date(),
     }
@@ -120,7 +117,7 @@ const login = async (email: string, password: string) => {
 
     // Verificar si ya existe en Firestore
     const userDoc = await getDoc(doc(db, "usuarios", user.uid))
-    
+
     if (!userDoc.exists()) {
       // Primera vez: crear documento
       const nuevoUsuario: Omit<Usuario, "id"> = {
@@ -128,6 +125,7 @@ const login = async (email: string, password: string) => {
         nombre: user.displayName || "Usuario",
         departamentoId: null,
         rol: "vecino",
+        es_admin: false,
         esAdmin: false,
         fechaRegistro: new Date(),
       }

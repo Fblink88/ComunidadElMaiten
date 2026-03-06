@@ -35,18 +35,40 @@ import { Card } from "@/shared/ui"
  * Redirige según el estado de autenticación y rol del usuario.
  */
 const RootRedirect = () => {
-  const { usuario, firebaseUser } = useAuth()
+  const { usuario, firebaseUser, loading } = useAuth()
+
+  // Esperar a que cargue el estado de auth antes de redirigir
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
 
   if (!firebaseUser) {
     return <Navigate to="/login" replace />
   }
 
-  // Fallback: Si el usuario es null (error permisos) pero es el email admin, forzar admin
   if (usuario?.es_admin || usuario?.esAdmin || firebaseUser.email === "edificio.elmaiten@gmail.com") {
     return <Navigate to="/admin" replace />
   }
 
   return <Navigate to="/dashboard" replace />
+}
+
+/**
+ * Componente que redirige admins a /admin si llegan a /dashboard.
+ * Esto cubre el caso edge donde un admin accede directamente a /dashboard.
+ */
+const SmartDashboard = () => {
+  const { usuario, firebaseUser } = useAuth()
+
+  if (usuario?.es_admin || usuario?.esAdmin || firebaseUser?.email === "edificio.elmaiten@gmail.com") {
+    return <Navigate to="/admin" replace />
+  }
+
+  return <DashboardPage />
 }
 
 // ============================================
@@ -107,7 +129,7 @@ export const AppRouter = () => {
           element={
             <ProtectedRoute>
               <MainLayout>
-                <DashboardPage />
+                <SmartDashboard />
               </MainLayout>
             </ProtectedRoute>
           }

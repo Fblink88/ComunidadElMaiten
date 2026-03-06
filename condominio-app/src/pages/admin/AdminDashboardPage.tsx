@@ -10,14 +10,12 @@
 
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Card, Button, Badge, Spinner, Modal } from '@/shared/ui'
+import { Card, Button, Badge, Spinner } from '@/shared/ui'
 import {
   getDepartamentos,
   getPagosPendientes,
   getAllPagos,
   getGastosMensuales,
-  seedData,
-  clearData,
 } from '@/shared/api'
 import type { GastoMensual, Pago, Departamento } from '@/shared/types'
 import {
@@ -29,9 +27,6 @@ import {
   Users,
   Calendar,
   Clock,
-  Database,
-  Trash2,
-  RefreshCw,
 } from 'lucide-react'
 
 export const AdminDashboardPage = () => {
@@ -42,9 +37,6 @@ export const AdminDashboardPage = () => {
   const [gastosGlobales, setGastosGlobales] = useState<GastoMensual[]>([])
   const [pagosVerificando, setPagosVerificando] = useState<Pago[]>([])
   const [loading, setLoading] = useState(true)
-  const [seedingLoading, setSeedingLoading] = useState(false)
-  const [showSeedModal, setShowSeedModal] = useState(false)
-  const [showClearModal, setShowClearModal] = useState(false)
 
   useEffect(() => {
     cargarDatos()
@@ -76,35 +68,6 @@ export const AdminDashboardPage = () => {
     }
   }
 
-  const handleSeedData = async () => {
-    setSeedingLoading(true)
-    try {
-      await seedData()
-      setShowSeedModal(false)
-      await cargarDatos()
-      alert('Datos de prueba generados exitosamente')
-    } catch (error) {
-      console.error(error)
-      alert('Error al generar datos')
-    } finally {
-      setSeedingLoading(false)
-    }
-  }
-
-  const handleClearData = async () => {
-    setSeedingLoading(true)
-    try {
-      await clearData()
-      setShowClearModal(false)
-      await cargarDatos()
-      alert('Datos de prueba eliminados exitosamente')
-    } catch (error) {
-      console.error(error)
-      alert('Error al eliminar datos')
-    } finally {
-      setSeedingLoading(false)
-    }
-  }
 
   if (loading) {
     return (
@@ -164,7 +127,7 @@ export const AdminDashboardPage = () => {
 
   // Actividad restante de la BD
   const actividadReciente = [...pagosDelMes]
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .sort((a, b) => new Date(b.created_at || b.fecha_pago || '').getTime() - new Date(a.created_at || a.fecha_pago || '').getTime())
     .slice(0, 10)
 
   return (
@@ -354,7 +317,7 @@ export const AdminDashboardPage = () => {
                             Depto {depto?.numero || '?'} - {pago.periodo}
                           </p>
                           <p className="text-xs text-gray-600">
-                            {new Date(pago.created_at).toLocaleDateString('es-CL', {
+                            {new Date(pago.created_at || pago.fecha_pago || '').toLocaleDateString('es-CL', {
                               day: 'numeric',
                               month: 'short',
                               hour: '2-digit',
@@ -437,105 +400,6 @@ export const AdminDashboardPage = () => {
         </Card>
       </div>
 
-      {/* Gestión de Datos de Prueba */}
-      <Card className="p-6 border-blue-200 bg-blue-50/50">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Database className="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">Datos de Prueba</h3>
-              <p className="text-sm text-gray-600">Herramientas para desarrollo y pruebas del sistema</p>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <Button
-              className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
-              onClick={() => setShowClearModal(true)}
-              disabled={seedingLoading}
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Limpiar Datos
-            </Button>
-            <Button
-              onClick={() => setShowSeedModal(true)}
-              disabled={seedingLoading}
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Generar Datos
-            </Button>
-          </div>
-        </div>
-      </Card>
-
-      {/* Modals */}
-      <Modal
-        isOpen={showSeedModal}
-        onClose={() => setShowSeedModal(false)}
-        title="Generar Datos de Prueba"
-      >
-        <div className="space-y-4">
-          <p className="text-gray-600">
-            Se generarán 10 departamentos, 10 propietarios, 5 arrendatarios y pagos de prueba asociados.
-            Esto es útil para probar el sistema con datos "reales".
-          </p>
-          <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-            <div className="flex gap-2">
-              <AlertCircle className="w-5 h-5 text-yellow-600 shrink-0" />
-              <p className="text-sm text-yellow-800">
-                Esta acción no borrará los datos existentes, pero podría duplicar información si ya existen datos.
-              </p>
-            </div>
-          </div>
-          <div className="flex justify-end gap-3 mt-6">
-            <Button variant="ghost" onClick={() => setShowSeedModal(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSeedData} isLoading={seedingLoading}>
-              Generar Datos
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      <Modal
-        isOpen={showClearModal}
-        onClose={() => setShowClearModal(false)}
-        title="Limpiar Datos de Prueba"
-      >
-        <div className="space-y-4">
-          <p className="text-gray-600">
-            ¿Estás seguro? Esta acción eliminará permanentemente:
-          </p>
-          <ul className="list-disc list-inside text-gray-600 ml-2">
-            <li>Todos los departamentos</li>
-            <li>Todos los pagos y gastos</li>
-            <li>Todos los usuarios (excepto administradores)</li>
-          </ul>
-          <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-            <div className="flex gap-2">
-              <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
-              <p className="text-sm text-red-800 font-medium">
-                Esta acción no se puede deshacer.
-              </p>
-            </div>
-          </div>
-          <div className="flex justify-end gap-3 mt-6">
-            <Button variant="ghost" onClick={() => setShowClearModal(false)}>
-              Cancelar
-            </Button>
-            <Button
-              variant="primary"
-              className="bg-red-600 hover:bg-red-700"
-              onClick={handleClearData}
-              isLoading={seedingLoading}
-            >
-              Sí, eliminar todo
-            </Button>
-          </div>
-        </div>
-      </Modal>
     </div >
   )
 }

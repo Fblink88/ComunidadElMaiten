@@ -21,6 +21,8 @@ interface BadgeProps {
   variant?: "success" | "warning" | "error" | "info" | "default"
   /** Tamaño del badge */
   size?: "sm" | "md"
+  /** Clases CSS adicionales */
+  className?: string
 }
 
 /**
@@ -42,17 +44,10 @@ export const Badge = ({
   children,
   variant = "default",
   size = "md",
+  className = "",
 }: BadgeProps) => {
-  /**
-   * Estilos base del badge.
-   * Incluye bordes redondeados completos y font-weight medium.
-   */
   const baseStyles = "inline-flex items-center font-medium rounded-full"
 
-  /**
-   * Estilos de color para cada variante.
-   * Cada variante tiene un fondo suave y texto del mismo tono.
-   */
   const variantStyles = {
     success: "bg-green-100 text-green-800",
     warning: "bg-yellow-100 text-yellow-800",
@@ -61,16 +56,13 @@ export const Badge = ({
     default: "bg-gray-100 text-gray-800",
   }
 
-  /**
-   * Estilos de tamaño (padding y font-size).
-   */
   const sizeStyles = {
     sm: "px-2 py-0.5 text-xs",
     md: "px-3 py-1 text-sm",
   }
 
   return (
-    <span className={`${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]}`}>
+    <span className={`${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}>
       {children}
     </span>
   )

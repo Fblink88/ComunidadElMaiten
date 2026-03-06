@@ -25,6 +25,8 @@ interface CardProps {
   className?: string
   /** Elimina el padding interno */
   noPadding?: boolean
+  /** Handler de click opcional */
+  onClick?: () => void
 }
 
 /**
@@ -53,6 +55,7 @@ export const Card = ({
   title,
   className = "",
   noPadding = false,
+  onClick,
 }: CardProps) => {
   /**
    * Estilos base de la tarjeta.
@@ -66,7 +69,7 @@ export const Card = ({
   const paddingStyles = noPadding ? "" : "p-6"
 
   return (
-    <div className={`${baseStyles} ${paddingStyles} ${className}`}>
+    <div className={`${baseStyles} ${paddingStyles} ${className}`} onClick={onClick} role={onClick ? "button" : undefined}>
       {/* Título opcional */}
       {title && (
         <h3 className="text-lg font-semibold text-gray-800 mb-4">{title}</h3>
