@@ -8,7 +8,7 @@ interface ReporteResumenMensualProps {
     isLoading: boolean
 }
 
-export const ReporteResumenMensual = ({ pagos, departamentos, gastos, isLoading }: ReporteResumenMensualProps) => {
+export const ReporteResumenMensual = ({ pagos, gastos, isLoading }: ReporteResumenMensualProps) => {
 
     const formatMoney = (amount: number) => {
         return new Intl.NumberFormat("es-CL", {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { collection, query, where, getDocs, doc, updateDoc, deleteDoc } from "firebase/firestore"
+import { collection, query, where, getDocs, doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore"
 import { db } from "@/shared/config/firebase"
 import { useAuth } from "@/app/providers"
 import { Card } from "@/shared/ui"
@@ -9,9 +9,10 @@ import { Check, Trash2, User as UserIcon } from "lucide-react"
 export const MiDepartamentoPage = () => {
     const { usuario } = useAuth()
     const [residentes, setResidentes] = useState<Usuario[]>([])
+    const [departamentoNumero, setDepartamentoNumero] = useState<string>("")
     const [loading, setLoading] = useState(true)
 
-    const fetchResidentes = async () => {
+    const fetchDatos = async () => {
         if (!usuario?.departamento_id) return
 
         setLoading(true)
@@ -27,6 +28,13 @@ export const MiDepartamentoPage = () => {
             })) as Usuario[]
 
             setResidentes(data)
+
+            // Obtener el numero de depto
+            const deptoRef = doc(db, "departamentos", usuario.departamento_id)
+            const deptoSnap = await getDoc(deptoRef)
+            if (deptoSnap.exists()) {
+                setDepartamentoNumero(deptoSnap.data().numero)
+            }
         } catch (error) {
             console.error("Error al cargar residentes:", error)
         } finally {
@@ -35,7 +43,7 @@ export const MiDepartamentoPage = () => {
     }
 
     useEffect(() => {
-        fetchResidentes()
+        fetchDatos()
     }, [usuario?.departamento_id])
 
     const handleAprobar = async (id: string) => {
@@ -68,7 +76,7 @@ export const MiDepartamentoPage = () => {
     return (
         <div className="space-y-6">
             <h1 className="text-2xl font-bold text-gray-800">
-                Gestión de Departamento {usuario.departamento_id}
+                Gestión de Departamento {departamentoNumero || usuario.departamento_id}
             </h1>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

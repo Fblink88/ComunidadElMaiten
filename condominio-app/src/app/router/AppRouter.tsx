@@ -13,7 +13,7 @@
 
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { useAuth } from "@/app/providers"
-import { ProtectedRoute } from "./ProtectedRoute"
+import { ProtectedRoute, RequireRole } from "./ProtectedRoute"
 import { LoginPage, RegisterPage, PendingApprovalPage } from "@/pages/auth"
 import {
   DashboardPage,
@@ -175,11 +175,13 @@ export const AppRouter = () => {
           }
         />
         <Route
-          path="/dashboard/autorizaciones"
+          path="/dashboard/usuarios-depto"
           element={
             <ProtectedRoute>
               <MainLayout>
-                <AutorizacionesPage />
+                <RequireRole roles={["propietario"]}>
+                  <AutorizacionesPage />
+                </RequireRole>
               </MainLayout>
             </ProtectedRoute>
           }

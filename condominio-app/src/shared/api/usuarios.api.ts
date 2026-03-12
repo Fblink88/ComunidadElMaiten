@@ -71,3 +71,27 @@ export const aprobarUsuario = async (id: string, activo: boolean): Promise<Usuar
   const response = await apiClient.post<Usuario>(`/api/usuarios/${id}/aprobar?activo=${activo}`)
   return response.data
 }
+
+/**
+ * Aprueba un registro pendiente: asigna departamento y activa la cuenta.
+ * Puede usarlo el admin (cualquier usuario) o el propietario (solo su depto).
+ */
+export const aprobarRegistro = async (uid: string, departamento_id: string): Promise<Usuario> => {
+  const response = await apiClient.post<Usuario>(`/api/usuarios/${uid}/aprobar-registro`, { departamento_id })
+  return response.data
+}
+
+/**
+ * Rechaza un registro pendiente y elimina el usuario.
+ */
+export const rechazarRegistro = async (uid: string): Promise<void> => {
+  await apiClient.delete(`/api/usuarios/${uid}/rechazar-registro`)
+}
+
+/**
+ * Obtiene todos los usuarios con estado pendiente_aprobacion.
+ */
+export const getUsuariosPendientes = async (): Promise<Usuario[]> => {
+  const response = await apiClient.get<Usuario[]>('/api/usuarios/pendientes')
+  return response.data
+}

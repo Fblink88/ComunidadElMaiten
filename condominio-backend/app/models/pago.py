@@ -64,6 +64,20 @@ class PagoCreate(PagoBase):
         description="Método de pago a utilizar"
     )
 
+class PagoOnlineRequest(BaseModel):
+    """
+    Schema para iniciar un pago online a la billetera.
+    """
+    departamento_id: str = Field(
+        ...,
+        description="ID del departamento que recargará saldo"
+    )
+    monto: int = Field(
+        ...,
+        gt=0,
+        description="Monto a recargar en CLP"
+    )
+
 
 class PagoUpdate(BaseModel):
     """

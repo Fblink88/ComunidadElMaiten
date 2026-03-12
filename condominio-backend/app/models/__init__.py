@@ -32,7 +32,8 @@ from .pago import (
     PagoBase,
     PagoCreate,
     PagoUpdate,
-    PagoResponse
+    PagoResponse,
+    PagoOnlineRequest
 )
 
 from .gasto import (

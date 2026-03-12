@@ -63,43 +63,40 @@ export const HistorialPage = () => {
             // 3. Generar lista unificada (Pagos reales + Deudas)
             const historialCompleto: Pago[] = []
 
+            // Periodo actual (solo mostrar hasta el mes en curso)
+            const ahora = new Date()
+            const periodoActual = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}`
+
             // Iteramos sobre los gastos (meses que deberían estar pagados)
-            gastosData.forEach((gasto: any) => {
-                const pagoExistente = pagosMap.get(gasto.periodo)
+            // Solo incluir periodos hasta el mes actual
+            gastosData
+                .filter((gasto: any) => gasto.periodo <= periodoActual)
+                .forEach((gasto: any) => {
+                    const pagoExistente = pagosMap.get(gasto.periodo)
 
-                if (pagoExistente) {
-                    // Si existe pago, lo usamos tal cual
-                    historialCompleto.push(pagoExistente)
-                } else {
-                    // Si NO existe pago, creamos uno "virtual" con estado pendiente/deuda
-                    const montoCalculado = Math.round(gasto.valor_por_m2 * deptoData.metros_cuadrados)
+                    if (pagoExistente) {
+                        // Si existe pago, lo usamos tal cual
+                        historialCompleto.push(pagoExistente)
+                    } else {
+                        // Si NO existe pago, creamos uno "virtual" con estado pendiente/deuda
+                        const montoCalculado = Math.round((gasto.valor_por_m2 || 0) * (deptoData.metros_cuadrados || 0))
 
-                    const pagoVirtual: Pago = {
-                        id: `virtual-${gasto.periodo}`,
-                        departamento_id: deptoData.id,
-                        monto: montoCalculado,
-                        periodo: gasto.periodo,
-                        estado: 'pendiente', // Usamos 'pendiente' para representar deuda
-                        metodo: null,
-                        created_at: new Date().toISOString(), // Fecha actual o del gasto
-                        // Propiedades opcionales
-                        fecha_pago: null,
-                        fecha_transferencia: null,
-                        nombre_pagador: null,
-                        verificado_por: null,
-                        notas: "Pago pendiente generado automáticamente",
-                        khipu_payment_id: null
+                        const pagoVirtual: Pago = {
+                            id: `virtual-${gasto.periodo}`,
+                            departamento_id: deptoData.id,
+                            monto: montoCalculado,
+                            periodo: gasto.periodo,
+                            estado: 'pendiente',
+                            metodo: 'ajuste_manual' as any,
+                            created_at: new Date().toISOString(),
+                        }
+                        historialCompleto.push(pagoVirtual)
                     }
-                    historialCompleto.push(pagoVirtual)
-                }
-            })
+                })
 
-            // Agregar pagos extraordinarios o que no calcen con gastos mensuales si los hubiera
-            // (Opcional: Por ahora asumimos que todos los pagos corresponden a un gasto mensual)
-            // Si hubiera pagos en pagosData que NO están en gastosData (ej: pagos adelantados),
-            // deberíamos agregarlos también.
+            // Agregar pagos que no calcen con gastos mensuales (solo hasta mes actual)
             pagosData.forEach((p: Pago) => {
-                if (!gastosData.find((g: any) => g.periodo === p.periodo)) {
+                if (!gastosData.find((g: any) => g.periodo === p.periodo) && p.periodo <= periodoActual) {
                     historialCompleto.push(p)
                 }
             })
@@ -270,9 +267,7 @@ export const HistorialPage = () => {
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                     {pago.fecha_pago
                                                         ? format(new Date(pago.fecha_pago), "dd/MM/yyyy HH:mm", { locale: es })
-                                                        : pago.estado === 'pendiente'
-                                                            ? <span className="text-gray-400 italic text-xs">Pendiente de pago</span>
-                                                            : format(new Date(pago.created_at as string), "dd/MM/yyyy HH:mm", { locale: es })
+                                                        : <span className="text-gray-400 italic text-xs">-</span>
                                                     }
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
@@ -285,7 +280,7 @@ export const HistorialPage = () => {
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {pago.nombre_pagador || (pago.metodo === 'saldo_a_favor' ? 'Saldo a Favor' : '-')}
+                                                    {(pago as any).nombre_pagador || (pago.metodo === 'saldo_a_favor' ? 'Saldo a Favor' : '-')}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     {getEstadoBadge(pago.estado)}

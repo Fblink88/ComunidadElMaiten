@@ -161,7 +161,7 @@ export const DetallePago = ({ pago, onClose, onPagoVerificado }: DetallePagoProp
                 <div>
                   <p className="text-sm text-blue-700">Fecha de Transferencia:</p>
                   <p className="font-medium text-blue-900">
-                    {formatearFecha(pago.fecha_transferencia)}
+                    {formatearFecha(pago.fecha_transferencia?.toString() || '')}
                   </p>
                 </div>
               )}
@@ -175,12 +175,12 @@ export const DetallePago = ({ pago, onClose, onPagoVerificado }: DetallePagoProp
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-600">Creado:</span>
-              <span className="font-medium">{formatearFecha(pago.created_at)}</span>
+              <span className="font-medium">{formatearFecha(pago.created_at?.toString() || '')}</span>
             </div>
             {pago.fecha_pago && (
               <div className="flex justify-between">
                 <span className="text-gray-600">Pagado:</span>
-                <span className="font-medium">{formatearFecha(pago.fecha_pago)}</span>
+                <span className="font-medium">{formatearFecha(pago.fecha_pago?.toString() || '')}</span>
               </div>
             )}
           </div>

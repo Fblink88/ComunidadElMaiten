@@ -18,11 +18,9 @@ import {
   updateGastoMensual,
   createGastoExtraordinario,
   marcarPagoExtraordinario,
-  type GastoMensual,
-  type GastoExtraordinario,
-  type ItemGasto,
 } from '@/shared/api'
-import { getDepartamentos, type Departamento } from '@/shared/api'
+import type { GastoMensual, GastoExtraordinario, ItemGasto, Departamento } from '@/shared/types'
+import { getDepartamentos } from '@/shared/api'
 import {
   DollarSign,
   Plus,
@@ -161,7 +159,7 @@ export const GastosPage = () => {
   const handleEditarGasto = (gasto: GastoMensual) => {
     setEditingGasto(gasto)
     setPeriodo(gasto.periodo)
-    setItems(gasto.items.map(i => ({ concepto: i.concepto, monto: i.monto })))
+    setItems(gasto.items.map((i: ItemGasto) => ({ concepto: i.concepto, monto: i.monto })))
     setShowModalGastoMensual(true)
   }
 
@@ -473,7 +471,7 @@ export const GastosPage = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-500">
-                            {formatearFecha(gasto.created_at)}
+                            {formatearFecha(gasto.created_at?.toString() || '')}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -560,17 +558,17 @@ export const GastosPage = () => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm font-semibold text-gray-900">
-                              {formatearMonto(gasto.monto_total)}
+                              {formatearMonto(gasto.monto_total ?? 0)}
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-gray-500">
-                              {formatearMonto(gasto.monto_por_depto)}
+                              {formatearMonto(gasto.monto_por_depto ?? 0)}
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-gray-500">
-                              {formatearFecha(gasto.fecha)}
+                              {formatearFecha(gasto.fecha?.toString() || '')}
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -702,7 +700,7 @@ export const GastosPage = () => {
               <div>
                 <p className="text-sm text-gray-500">Creado</p>
                 <p className="text-base font-semibold text-gray-900">
-                  {formatearFecha(gastoMensualSeleccionado.created_at)}
+                  {formatearFecha(gastoMensualSeleccionado.created_at?.toString() || '')}
                 </p>
               </div>
               <div>
@@ -722,7 +720,7 @@ export const GastosPage = () => {
             <div>
               <p className="text-sm font-medium text-gray-700 mb-3">Items de Gasto</p>
               <div className="space-y-2">
-                {gastoMensualSeleccionado.items.map((item, index) => (
+                {gastoMensualSeleccionado.items.map((item: ItemGasto, index: number) => (
                   <div
                     key={index}
                     className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
@@ -820,19 +818,19 @@ export const GastosPage = () => {
               <div>
                 <p className="text-sm text-gray-500">Fecha</p>
                 <p className="text-base font-semibold text-gray-900">
-                  {formatearFecha(gastoExtraordinarioSeleccionado.fecha)}
+                  {formatearFecha(gastoExtraordinarioSeleccionado.fecha?.toString() || '')}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Monto Total</p>
                 <p className="text-base font-semibold text-gray-900">
-                  {formatearMonto(gastoExtraordinarioSeleccionado.monto_total)}
+                  {formatearMonto(gastoExtraordinarioSeleccionado.monto_total ?? 0)}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Monto por Depto</p>
                 <p className="text-base font-semibold text-gray-900">
-                  {formatearMonto(gastoExtraordinarioSeleccionado.monto_por_depto)}
+                  {formatearMonto(gastoExtraordinarioSeleccionado.monto_por_depto ?? 0)}
                 </p>
               </div>
             </div>

@@ -87,10 +87,10 @@ export const PagosPorVerificar = ({ onSeleccionarPago }: PagosPorVerificarProps)
                             {pagosVerificando.map((pago, index) => (
                                 <tr key={pago.id || index} className="border-b hover:bg-gray-50 transition-colors whitespace-nowrap">
                                     <td className="py-3 px-4 text-gray-700">
-                                        {pago.fecha_transferencia ? formatearFecha(pago.fecha_transferencia) : formatearFecha(pago.created_at)}
+                                        {pago.fecha_transferencia ? formatearFecha(pago.fecha_transferencia.toString()) : formatearFecha(pago.created_at?.toString() || '')}
                                     </td>
                                     <td className="py-3 px-4 font-semibold text-gray-800">
-                                        Dpto {deptosMap[pago.departamento_id] || pago.departamento_id}
+                                        Dpto {pago.departamento_id ? (deptosMap[pago.departamento_id] || pago.departamento_id) : 'No especificado'}
                                     </td>
                                     <td className="py-3 px-4 text-gray-700">
                                         {pago.nombre_pagador || 'No especificado'}

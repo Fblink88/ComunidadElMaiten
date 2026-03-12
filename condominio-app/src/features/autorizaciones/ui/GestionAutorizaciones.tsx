@@ -43,8 +43,8 @@ export const GestionAutorizaciones = () => {
         getSolicitudesPendientes(),
       ])
 
-      setAutorizaciones(autorizacionesData)
-      setSolicitudesPendientes(solicitudesData)
+      setAutorizaciones(autorizacionesData as unknown as Autorizacion[])
+      setSolicitudesPendientes(solicitudesData as unknown as Autorizacion[])
     } catch (error) {
       console.error('Error cargando autorizaciones:', error)
     } finally {
@@ -226,7 +226,7 @@ export const GestionAutorizaciones = () => {
 
                       {/* Fechas */}
                       <div className="text-xs text-gray-500 mb-3">
-                        <p>Aprobada: {formatearFecha(autorizacion.fecha_respuesta!)}</p>
+                        <p>Aprobada: {formatearFecha(autorizacion.fecha_respuesta?.toString() || '')}</p>
                       </div>
 
                       {/* Botón Revocar */}
@@ -282,9 +282,9 @@ export const GestionAutorizaciones = () => {
                           </div>
                           <p className="text-xs text-gray-500 mt-1">
                             {autorizacion.estado === 'rechazada' &&
-                              `Rechazada: ${formatearFecha(autorizacion.fecha_respuesta!)}`}
+                              `Rechazada: ${formatearFecha(autorizacion.fecha_respuesta?.toString() || '')}`}
                             {autorizacion.estado === 'revocada' &&
-                              `Revocada: ${formatearFecha(autorizacion.fecha_revocacion!)}`}
+                              `Revocada: ${formatearFecha(autorizacion.fecha_revocacion?.toString() || '')}`}
                           </p>
                         </div>
                       </div>

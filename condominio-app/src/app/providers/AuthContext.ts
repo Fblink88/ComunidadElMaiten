@@ -25,7 +25,7 @@ export interface AuthContextType {
   /** Función para iniciar sesión con email y contraseña */
   login: (email: string, password: string) => Promise<void>
   /** Función para registrar un nuevo usuario */
-  register: (email: string, password: string, nombre: string) => Promise<void>
+  register: (email: string, password: string, nombre: string, departamento_solicitado_numero: string, rol: "vecino" | "propietario" | "arrendatario") => Promise<void>
   /** Función para iniciar sesión con Google */
   loginWithGoogle: () => Promise<void>
   /** Función para cerrar sesión */
@@ -48,10 +48,10 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
  */
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext)
-  
+
   if (context === undefined) {
     throw new Error("useAuth debe usarse dentro de un AuthProvider")
   }
-  
+
   return context
 }

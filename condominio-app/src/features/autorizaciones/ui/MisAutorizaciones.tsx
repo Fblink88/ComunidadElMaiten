@@ -23,7 +23,7 @@ export const MisAutorizaciones = () => {
     try {
       setLoading(true)
       const data = await getMisAutorizaciones()
-      setAutorizaciones(data)
+      setAutorizaciones(data as unknown as Autorizacion[])
     } catch (error) {
       console.error('Error cargando autorizaciones:', error)
     } finally {
@@ -183,15 +183,15 @@ export const MisAutorizaciones = () => {
 
                 {/* Fechas */}
                 <div className="text-xs text-gray-500 space-y-1">
-                  <p>Creada: {formatearFecha(autorizacion.fecha_creacion)}</p>
+                  <p>Creada: {formatearFecha(autorizacion.fecha_creacion?.toString() || '')}</p>
                   {autorizacion.fecha_respuesta && (
                     <p>
                       {autorizacion.estado === 'aprobada' ? 'Aprobada' : 'Rechazada'}:{' '}
-                      {formatearFecha(autorizacion.fecha_respuesta)}
+                      {formatearFecha(autorizacion.fecha_respuesta?.toString() || '')}
                     </p>
                   )}
                   {autorizacion.fecha_revocacion && (
-                    <p>Revocada: {formatearFecha(autorizacion.fecha_revocacion)}</p>
+                    <p>Revocada: {formatearFecha(autorizacion.fecha_revocacion?.toString() || '')}</p>
                   )}
                 </div>
               </div>

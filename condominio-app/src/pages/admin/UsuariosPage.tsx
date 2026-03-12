@@ -389,12 +389,12 @@ export const UsuariosPage = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">
-                          {getNombreDepartamento(usuario.departamento_id)}
+                          {getNombreDepartamento(usuario.departamento_id || null)}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-600">
-                          {new Date(usuario.fecha_registro).toLocaleDateString('es-CL')}
+                          {new Date(usuario.fecha_registro || 0).toLocaleDateString('es-CL')}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

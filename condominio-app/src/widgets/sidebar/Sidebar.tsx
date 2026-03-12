@@ -18,7 +18,6 @@ import {
   Users,
   Receipt,
   BarChart3,
-  Shield,
   UserRound
 } from "lucide-react"
 import { useAuth } from "@/app/providers"
@@ -70,18 +69,12 @@ export const Sidebar = () => {
       vecinoItems.push({
         label: "Mi Departamento",
         path: "/dashboard/mi-departamento",
+        icon: <Building2 size={20} />
+      })
+      vecinoItems.push({
+        label: "Usuarios de mi Depto",
+        path: "/dashboard/usuarios-depto",
         icon: <Users size={20} />
-      })
-      vecinoItems.push({
-        label: "Mis Autorizaciones",
-        path: "/dashboard/mis-autorizaciones",
-        icon: <Shield size={20} />
-      })
-    } else if (usuario?.rol === "arrendatario") {
-      vecinoItems.push({
-        label: "Autorizaciones",
-        path: "/dashboard/autorizaciones",
-        icon: <Shield size={20} />
       })
     }
 

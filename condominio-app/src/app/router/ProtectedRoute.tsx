@@ -40,7 +40,7 @@ interface ProtectedRouteProps {
  *   <AdminPage />
  * </ProtectedRoute>
  */
-export const ProtectedRoute = ({ children, adminOnly = false, allowInactive = false }: ProtectedRouteProps) => {
+export const ProtectedRoute = ({ children, allowInactive = false }: ProtectedRouteProps) => {
   const { usuario, firebaseUser } = useAuth()
 
   /**
@@ -57,15 +57,39 @@ export const ProtectedRoute = ({ children, adminOnly = false, allowInactive = fa
     return <Navigate to="/pending-approval" replace />
   }
 
-  /**
-   * Si la ruta es solo para admin y el usuario no es admin, redirige al dashboard.
-   */
-  if (adminOnly && !(usuario?.es_admin || usuario?.esAdmin || firebaseUser.email === "edificio.elmaiten@gmail.com")) {
-    return <Navigate to="/dashboard" replace />
+  // Si el usuario está cargado pero su cuenta está pendiente de aprobación (y no es admin)
+  if (usuario && usuario.estado_cuenta === "pendiente_aprobacion" && !allowInactive && !(usuario.es_admin || usuario.esAdmin)) {
+    return <Navigate to="/pending-approval" replace />
   }
 
   /**
    * Si pasa las validaciones, muestra el contenido.
    */
+  return <>{children}</>
+}
+
+/**
+ * Componente RequireRole
+ * Permite acceso a la ruta solo si el rol del usuario actual coincide con al menos uno de los roles definidos.
+ */
+export const RequireRole = ({
+  children,
+  roles,
+}: {
+  children: ReactNode
+  roles: Array<"admin" | "propietario" | "arrendatario" | "vecino">
+}) => {
+  const { usuario } = useAuth()
+
+  // Si el usuario no está cargado, no mostramos nada aún (o redirigimos, manejado por ProtectedRoute)
+  if (!usuario) {
+    return null
+  }
+
+  // Admin global puede saltarse esta restricción si queremos, pero por ahora lo dejamos estricto a los roles pasados
+  if (!roles.includes(usuario.rol)) {
+    return <Navigate to="/dashboard" replace />
+  }
+
   return <>{children}</>
 }

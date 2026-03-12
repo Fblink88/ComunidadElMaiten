@@ -72,7 +72,7 @@ export const ListaPagos = ({ onSeleccionarPago }: ListaPagosProps) => {
     if (filtroDepto.trim()) {
       const busqueda = filtroDepto.toLowerCase().trim()
       data = data.filter(p => {
-        const numDepto = deptosMap[p.departamento_id] || ""
+        const numDepto = p.departamento_id ? (deptosMap[p.departamento_id] || "") : ""
         return numDepto.toLowerCase().includes(busqueda)
       })
     }
@@ -83,14 +83,14 @@ export const ListaPagos = ({ onSeleccionarPago }: ListaPagosProps) => {
       // O si el usuario escribe "2024-01", busca en periodo
       const busqueda = filtroFecha.toLowerCase()
       data = data.filter(p => {
-        const fechaCreacion = p.created_at.substring(0, 10) // YYYY-MM-DD
+        const fechaCreacion = p.created_at ? p.created_at.substring(0, 10) : '' // YYYY-MM-DD
         const periodo = p.periodo.toLowerCase()
         return fechaCreacion.includes(busqueda) || periodo.includes(busqueda)
       })
     }
 
     // Ordenar: más recientes primero
-    data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    data.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
 
     setPagosFiltrados(data)
   }
@@ -218,7 +218,7 @@ export const ListaPagos = ({ onSeleccionarPago }: ListaPagosProps) => {
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="font-semibold text-lg">
-                      Departamento {deptosMap[pago.departamento_id] || pago.departamento_id}
+                      Departamento {pago.departamento_id ? (deptosMap[pago.departamento_id] || pago.departamento_id) : 'Desconocido'}
                     </h3>
                     <Badge variant={getEstadoBadgeVariant(pago.estado)}>
                       {getEstadoTexto(pago.estado)}
@@ -253,7 +253,7 @@ export const ListaPagos = ({ onSeleccionarPago }: ListaPagosProps) => {
                   </div>
 
                   <div className="mt-2 text-xs text-gray-500">
-                    Creado: {formatearFecha(pago.created_at)}
+                    Creado: {formatearFecha(pago.created_at || '')}
                   </div>
 
                   {pago.estado === "rechazado" && pago.notas && (

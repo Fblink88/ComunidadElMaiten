@@ -90,18 +90,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
    * Registra un nuevo usuario.
    * Crea el usuario en Firebase Auth y luego guarda sus datos en Firestore.
    */
-  const register = async (email: string, password: string, nombre: string) => {
+  const register = async (email: string, password: string, nombre: string, departamento_solicitado_numero: string, rol: "vecino" | "propietario" | "arrendatario") => {
     const { user } = await createUserWithEmailAndPassword(auth, email, password)
 
-    // Crear documento del usuario en Firestore
     const nuevoUsuario: Omit<Usuario, "id"> = {
       email,
       nombre,
-      departamentoId: null,
-      rol: "vecino",
+      rol,
+      estado_cuenta: "pendiente_aprobacion",
+      departamento_solicitado_numero,
+      activo: false,
       es_admin: false,
-      esAdmin: false,
-      fechaRegistro: new Date(),
+      departamento_id: null,
+      fecha_registro: new Date().toISOString(),
     }
 
     await setDoc(doc(db, "usuarios", user.uid), nuevoUsuario)

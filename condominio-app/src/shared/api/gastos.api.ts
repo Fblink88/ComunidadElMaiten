@@ -6,35 +6,11 @@
 
 import apiClient from './client'
 
-export interface ItemGasto {
-  concepto: string
-  monto: number
-}
-
-export interface GastoMensual {
-  id: string
-  periodo: string
-  items: ItemGasto[]
-  total: number
-  valor_por_m2: number
-  total_cobrado?: number
-  saldo_mes?: number
-  created_at: string
-}
+import type { ItemGasto, GastoMensual, GastoExtraordinario } from '../types'
 
 export interface GastoMensualCreate {
   periodo: string
   items: ItemGasto[]
-}
-
-export interface GastoExtraordinario {
-  id: string
-  concepto: string
-  monto_total: number
-  monto_por_depto: number
-  fecha: string
-  pagos: Record<string, boolean>
-  created_at: string
 }
 
 export interface GastoExtraordinarioCreate {

@@ -32,7 +32,7 @@ export const SolicitudesPendientes = ({ onUpdate }: SolicitudesPendientesProps) 
     try {
       setLoading(true)
       const data = await getSolicitudesPendientes()
-      setSolicitudes(data)
+      setSolicitudes(data as unknown as Autorizacion[])
     } catch (error) {
       console.error('Error cargando solicitudes:', error)
     } finally {
@@ -151,7 +151,7 @@ export const SolicitudesPendientes = ({ onUpdate }: SolicitudesPendientesProps) 
                       Solicitud de Autorización {solicitud.tipo === 'permanente' ? 'Permanente' : 'Ocasional'}
                     </h3>
                     <p className="text-sm text-gray-600 mt-1">
-                      Solicitada el {formatearFecha(solicitud.fecha_creacion)}
+                      Solicitada el {formatearFecha(solicitud.fecha_creacion?.toString() || '')}
                     </p>
                   </div>
                 </div>

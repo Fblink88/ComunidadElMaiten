@@ -6,18 +6,7 @@
 
 import apiClient from './client'
 
-export interface Departamento {
-  id: string
-  numero: string
-  propietario: string
-  metros_cuadrados: number
-  cuota_mensual: number
-  saldo_a_favor: number
-  activo: boolean
-  usuarios_ids: string[]
-  created_at: string
-  updated_at: string
-}
+import type { Departamento } from '../types'
 
 export interface DepartamentoCreate {
   numero: string
